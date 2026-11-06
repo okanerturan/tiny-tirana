@@ -68,7 +68,7 @@ def main():
     holes = ndimage.binary_fill_holes(painted) & ~painted; lab, nh = ndimage.label(holes)
     if nh:                                                              # specks inside the painting are not coast
         sz = ndimage.sum(holes, lab, range(1, nh + 1)); painted = painted | np.isin(lab, 1 + np.flatnonzero(sz < 4000))
-    inner = ndimage.distance_transform_edt(painted); MARGIN = GROW + 1.6 * NOISE_AMP + 8
+    inner = ndimage.distance_transform_edt(np.pad(painted, 1))[1:-1, 1:-1]; MARGIN = GROW + 1.6 * NOISE_AMP + 8   # outside the canvas = unpainted
     wm = Image.new('L', (W, H)); wd = ImageDraw.Draw(wm)
     for name, w in extra['worms'].items():
         pts = [P.to_px(q['lat'], q['lon'], Tn.elev(q['lat'], q['lon'])) if isinstance(q, dict) else q for q in w['pts']]
@@ -95,11 +95,14 @@ def main():
         sc = max(2, int(NOISE_SCALE / 2 ** o)); g = rng.standard_normal((H // sc + 2, W // sc + 2)).astype(np.float32)
         nz += amp * np.asarray(Image.fromarray(g).resize((W + sc, H + sc), Image.BICUBIC))[:H, :W]; amp *= 0.5
     nz /= 1.9
+    if extra.get('mode') == 'painted': land = painted.copy()            # keep everything painted; the coast is cut from its edge
     land = ndimage.binary_fill_holes(land)                             # slivers between neighbouring units are not coast
     field = ndimage.distance_transform_edt(~land) - ndimage.distance_transform_edt(land) - GROW
     gL = np.random.default_rng(SEED + 1).standard_normal((H // 400 + 2, W // 400 + 2)).astype(np.float32)
     bays = np.clip(np.asarray(Image.fromarray(gL).resize((W + 400, H + 400), Image.BICUBIC))[:H, :W], 0, None)
-    field = np.maximum(field, 1.8 * NOISE_AMP + 4 + 110 * bays - inner)   # keep the noise's reach inside the painting, with wide
+    edge = ndimage.gaussian_filter(1.8 * NOISE_AMP + 4 + 170 * bays - inner, 90)   # rounded: the blocks' staircase reads as a coast
+    edge = np.maximum(edge, 1.8 * NOISE_AMP + 4 - inner)                # but never closer to unpainted ground than the noise's reach
+    field = np.maximum(field, edge)   # keep the noise's reach inside the painting, with wide
     # bays where the land runs along the painting's edge (else that edge reads as a long straight line); before the noise,
     field = field - nz * NOISE_AMP                                     # so a coast that follows a painted edge still wobbles)
     field = np.where(painted, field, np.maximum(field, 1.0))            # never land where nothing was painted

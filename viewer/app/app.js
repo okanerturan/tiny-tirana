@@ -29,7 +29,7 @@ const PROJ = makeProjection(CONFIG.camera);
 const STR = {
   sq: { search: 'Kërko', searchPh: 'Kërko një vend, rrugë…', goto: 'Shko te', share: 'Ndaj', about: 'Rreth hartës', rotate: 'Rrotullo',
         zoomIn: 'Zmadho', zoomOut: 'Zvogëlo', home: 'E gjithë harta', close: 'Mbyll', copied: 'Lidhja u kopjua',
-        attr: 'Të dhënat e hartës ©2026 Google · © OpenStreetMap', noResults: 'Asnjë rezultat', landmarks: 'Pika kryesore', places: 'Vende', loading: 'Duke ngarkuar…', photo: 'Foto', onMap: 'Në këtë hartë', flyHere: 'Shko atje', prev: 'E mëparshmja', next: 'Tjetra', artCredit: 'Art: GPT Image 2.6, krijuar për këtë hartë', illustration: 'Ilustrim', views: 'Pamjet', diorama: 'Diorama', poster: 'Poster', landmarksBtn: 'Pikat kryesore', following: 'Duke ndjekur', stopFollow: 'Ndalo', follow: 'Ndiq', unfollow: 'Mos ndiq', aCar: 'një makinë', landmarksOn: 'Pikat kryesore u shfaqën', landmarksOff: 'Pikat kryesore u fshehën', aboutBrand: 'Tiny Tirana: rreth hartës', howLink: 'Si u bë kjo hartë (anglisht) →', planes: 'Avionët live', onGround: 'në tokë', demo: 'demo, jo e vërtetë', planesLive: '✈ {n} avionë live', planesNone: '✈ Asnjë avion tani', planesDemo: '✈ {n} avionë demo', buses: 'Autobusët (sipas orarit)', life: 'Makina',
+        attr: 'Të dhënat e hartës ©2026 Google · © OpenStreetMap', noResults: 'Asnjë rezultat', landmarks: 'Pika kryesore', places: 'Vende', loading: 'Duke ngarkuar…', photo: 'Foto', onMap: 'Në këtë hartë', flyHere: 'Shko atje', shareHere: 'Shpërndaje', osm: 'Hape në OpenStreetMap', shareView: 'Një hartë izometrike pixel-art e Tiranës', prev: 'E mëparshmja', next: 'Tjetra', artCredit: 'Art: GPT Image 2.6, krijuar për këtë hartë', illustration: 'Ilustrim', views: 'Pamjet', diorama: 'Diorama', poster: 'Poster', landmarksBtn: 'Pikat kryesore', following: 'Duke ndjekur', stopFollow: 'Ndalo', follow: 'Ndiq', unfollow: 'Mos ndiq', aCar: 'një makinë', landmarksOn: 'Pikat kryesore u shfaqën', landmarksOff: 'Pikat kryesore u fshehën', aboutBrand: 'Tiny Tirana: rreth hartës', howLink: 'Si u bë kjo hartë (anglisht) →', planes: 'Avionët live', onGround: 'në tokë', demo: 'demo, jo e vërtetë', planesLive: '✈ {n} avionë live', planesNone: '✈ Asnjë avion tani', planesDemo: '✈ {n} avionë demo', buses: 'Autobusët (sipas orarit)', life: 'Makina',
         kinds: { landmark: 'monument', square: 'shesh', park: 'park', water: 'ujë', neighbourhood: 'lagje', place: 'vend', street: 'rrugë', building: 'ndërtesë' },
         aboutBody: `<p>Një pikturë izometrike pixel-art e qytetit të Tiranës dhe aeroportit të Rinasit, e vizatuar bllok pas blloku nga një model i trajnuar mbi pamjet 3D të qytetit.</p>
           <p>Projekt personal, jo-tregtar. Pikturuar me Qwen-Image 2.1 + LoRA <i>tiranaiso</i>. Gjeometria nga Google Photorealistic 3D Tiles; emrat nga OpenStreetMap.</p>
@@ -38,7 +38,7 @@ const STR = {
           <p class="privacy">Statistika anonime: pa cookies dhe pa të dhëna personale. Numërojmë cilat vende dhe funksione përdoren, sa kohë shihet harta, sa shpejt ngarkohet dhe gabimet e faqes; nga serveri ruhet vetëm shteti, jo adresa IP. Nëse shfletuesi juaj kërkon të mos ndiqet (Do Not Track / GPC), nuk dërgohet asgjë.</p>` },
   en: { search: 'Search', searchPh: 'Search a place, street…', goto: 'Go to', share: 'Share', about: 'About this map', rotate: 'Rotate',
         zoomIn: 'Zoom in', zoomOut: 'Zoom out', home: 'Whole map', close: 'Close', copied: 'Link copied',
-        attr: 'Map data ©2026 Google · © OpenStreetMap', noResults: 'No results', landmarksBtn: 'Landmarks', following: 'Following', stopFollow: 'Stop', follow: 'Follow', unfollow: 'Unfollow', aCar: 'a car', landmarksOn: 'Landmarks shown', landmarksOff: 'Landmarks hidden', landmarks: 'Landmarks', places: 'Places', loading: 'Loading…', photo: 'Photo', onMap: 'On this map', flyHere: 'Fly here', prev: 'Previous', next: 'Next', artCredit: 'Art: GPT Image 2.6, made for this map', illustration: 'Illustration', views: 'Views', diorama: 'Diorama', poster: 'Poster', aboutBrand: 'Tiny Tirana: about this map', howLink: 'How this map was made →', planes: 'Live planes', onGround: 'on the ground', demo: 'demo, not real', planesLive: '✈ {n} live planes', planesNone: '✈ No planes right now', planesDemo: '✈ {n} demo planes', buses: 'Buses (timetable)', life: 'Cars',
+        attr: 'Map data ©2026 Google · © OpenStreetMap', noResults: 'No results', landmarksBtn: 'Landmarks', following: 'Following', stopFollow: 'Stop', follow: 'Follow', unfollow: 'Unfollow', aCar: 'a car', landmarksOn: 'Landmarks shown', landmarksOff: 'Landmarks hidden', landmarks: 'Landmarks', places: 'Places', loading: 'Loading…', photo: 'Photo', onMap: 'On this map', flyHere: 'Fly here', shareHere: 'Share', osm: 'Open in OpenStreetMap', shareView: 'An isometric pixel-art map of Tirana', prev: 'Previous', next: 'Next', artCredit: 'Art: GPT Image 2.6, made for this map', illustration: 'Illustration', views: 'Views', diorama: 'Diorama', poster: 'Poster', aboutBrand: 'Tiny Tirana: about this map', howLink: 'How this map was made →', planes: 'Live planes', onGround: 'on the ground', demo: 'demo, not real', planesLive: '✈ {n} live planes', planesNone: '✈ No planes right now', planesDemo: '✈ {n} demo planes', buses: 'Buses (timetable)', life: 'Cars',
         kinds: { landmark: 'landmark', square: 'square', park: 'park', water: 'water', neighbourhood: 'area', place: 'place', street: 'street', building: 'building' },
         aboutBody: `<p>An isometric pixel-art painting of the city of Tirana and Rinas airport, drawn block by block by a model trained on the city's 3D view.</p>
           <p>Personal, non-commercial project. Painted with Qwen-Image 2.1 + the <i>tiranaiso</i> LoRA. Geometry from Google Photorealistic 3D Tiles; names from OpenStreetMap.</p>
@@ -144,6 +144,8 @@ viewer.addHandler('open', () => {
   initCableCar({ viewer, item, origin: CONFIG.canvasOrigin }).catch(e => console.warn('[cablecar]', e));
   initBuses({ viewer, item, button: document.getElementById('busesBtn'), chip: document.getElementById('busesChip'), origin: CONFIG.canvasOrigin, lang: () => lang });
   try { initTiltShift({ viewer, item, button: document.getElementById('tsBtn') }); } catch (e) { console.warn('[tiltshift]', e); }
+  const lm0 = LANDMARKS.find(x => x.id === Q.get('lm'));             // a shared landmark link: open its card
+  if (lm0) openCard(lm0); else if (Q.get('lm')) setLm(null);
 });
 let planesCtl = null;
 follow.init({ viewer, chip: document.getElementById('followChip'), t: k => t(k) });
@@ -346,7 +348,8 @@ async function openCard(p, from) {
       <dl class="facts">${facts}</dl>
       <div class="card-actions">
         <button class="btn" type="button" data-act="prev" aria-label="${t('prev')}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 6-6 6 6 6"/></svg></button>
-        <button class="btn primary" type="button" data-act="fly">${t('flyHere')}</button>
+        <button class="btn primary" type="button" data-act="share"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 15V3m0 0L7.5 7.5M12 3l4.5 4.5"/><path d="M5 12v7h14v-7"/></svg><span>${t('shareHere')}</span></button>
+        <a class="btn" href="https://www.openstreetmap.org/?mlat=${p.lat}&amp;mlon=${p.lon}#map=18/${p.lat}/${p.lon}" target="_blank" rel="noopener" aria-label="${t('osm')}" title="${t('osm')}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21s-6.5-5.6-6.5-11a6.5 6.5 0 0 1 13 0c0 5.4-6.5 11-6.5 11Z"/><circle cx="12" cy="10" r="2.3"/></svg></a>
         <button class="btn" type="button" data-act="next" aria-label="${t('next')}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg></button>
       </div>
     </div>`;
@@ -357,12 +360,13 @@ async function openCard(p, from) {
   go(p.lat, p.lon, Math.min(p.zoom, 0.5)); clearPin();   // the landmark's own marker marks the spot (no second label)
   for (const m of markers) m.el.classList.toggle('active', m.p === p);
   card.querySelector('.card-close').addEventListener('click', closeCard);
-  card.querySelector('[data-act="fly"]').addEventListener('click', () => { go(p.lat, p.lon, p.zoom); });
+  card.querySelector('[data-act="share"]').addEventListener('click', () => shareLandmark(p));
+  setLm(p.id);
   card.querySelector('[data-act="prev"]').addEventListener('click', () => openCard(LANDMARKS[(cardIdx + LANDMARKS.length - 1) % LANDMARKS.length]));
   card.querySelector('[data-act="next"]').addEventListener('click', () => openCard(LANDMARKS[(cardIdx + 1) % LANDMARKS.length]));
   card.querySelector('h2').focus?.(); card.querySelector('.card-close').focus({ preventScroll: true });
 }
-function closeCard() { cardDone(); card.hidden = true; cardIdx = -1; for (const m of markers) m.el.classList.remove('active'); cardReturn?.focus?.({ preventScroll: true, focusVisible: false }); }
+function closeCard() { cardDone(); setLm(null); card.hidden = true; cardIdx = -1; for (const m of markers) m.el.classList.remove('active'); cardReturn?.focus?.({ preventScroll: true, focusVisible: false }); }
 addEventListener('keydown', e => {
   if (cardIdx < 0) return;
   if (e.key === 'Escape') closeCard();
@@ -388,10 +392,20 @@ function buildGoto() {
 
 // ---------------- share, toast ----------------
 const toast = msg => { const el = document.getElementById('toast'); el.textContent = msg; el.hidden = false; clearTimeout(toast.t); toast.t = setTimeout(() => (el.hidden = true), 1800); };
-document.getElementById('shareBtn').addEventListener('click', async () => {
-  writeHash(); const url = location.href; track('share');
-  if (navigator.share && matchMedia('(pointer: coarse)').matches) { try { await navigator.share({ title: 'Tiny Tirana', url }); return; } catch {} }
+// ---------------- sharing and landmark links (?lm=id opens that card; the Worker gives such links the card's preview) ----------------
+function setLm(id) { const u = new URL(location.href); if (id) u.searchParams.set('lm', id); else u.searchParams.delete('lm'); history.replaceState(null, '', u); }
+async function shareLink({ title, text, url }) {
+  if (navigator.share && matchMedia('(pointer: coarse)').matches) { try { await navigator.share({ title, text, url }); return; } catch (e) { if (e?.name === 'AbortError') return; } }
   try { await navigator.clipboard.writeText(url); toast(t('copied')); } catch { prompt('', url); }
+}
+function shareLandmark(p) {
+  track('share', { what: 'landmark', id: p.id });
+  return shareLink({ title: `${nm(p)} · Tiny Tirana`, text: `${nm(p)}: ${p.kind[lang]}`, url: `${location.origin}${location.pathname}?lm=${p.id}&lang=${lang}` });
+}
+document.getElementById('shareBtn').addEventListener('click', async () => {
+  if (cardIdx >= 0) return shareLandmark(LANDMARKS[cardIdx]);
+  writeHash(); track('share', { what: 'view' });
+  await shareLink({ title: 'Tiny Tirana', text: t('shareView'), url: location.href });
 });
 
 // ---------------- zoom / home ----------------

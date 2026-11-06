@@ -4,8 +4,26 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="color-scheme" content="light dark">
-<meta name="description" content="Tiny Tirana: an isometric pixel-art painting of central Tirana you can explore.">
-<title>Tiny Tirana</title>
+<meta name="description" content="Explore Tirana as an isometric pixel-art map: 30 landmarks with their stories, live planes over Rinas, buses on the real timetable and the Dajti cable car. Painted by an AI model, made with Claude.">
+<link rel="canonical" href="https://tirana.fyi/app/">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Tiny Tirana">
+<meta property="og:title" content="Tiny Tirana: an isometric pixel-art map of Tirana">
+<meta property="og:description" content="Explore Tirana as an isometric pixel-art map: 30 landmarks with their stories, live planes over Rinas, buses on the real timetable and the Dajti cable car. Painted by an AI model, made with Claude.">
+<meta property="og:url" content="https://tirana.fyi/app/">
+<meta property="og:image" content="https://tirana.fyi/app/og/tirana.jpg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="The city of Tirana painted as an isometric pixel-art island in the clouds">
+<meta property="og:locale" content="en_US">
+<meta property="og:locale:alternate" content="sq_AL">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Tiny Tirana: an isometric pixel-art map of Tirana">
+<meta name="twitter:description" content="Explore Tirana as an isometric pixel-art map: 30 landmarks with their stories, live planes over Rinas, buses on the real timetable and the Dajti cable car. Painted by an AI model, made with Claude.">
+<meta name="twitter:image" content="https://tirana.fyi/app/og/tirana.jpg">
+<meta name="twitter:image:alt" content="The city of Tirana painted as an isometric pixel-art island in the clouds">
+<script type="application/ld+json">{"@context": "https://schema.org", "@type": "WebSite", "name": "Tiny Tirana", "url": "https://tirana.fyi/", "description": "Explore Tirana as an isometric pixel-art map: 30 landmarks with their stories, live planes over Rinas, buses on the real timetable and the Dajti cable car. Painted by an AI model, made with Claude.", "image": "https://tirana.fyi/app/og/tirana.jpg", "inLanguage": ["sq", "en"], "creator": {"@type": "Person", "name": "@okanerturan", "url": "https://github.com/okanerturan"}}</script>
+<title>Tiny Tirana: an isometric pixel-art map of Tirana</title>
 <link rel="icon" type="image/svg+xml" href="brand/favicon.svg">
 <link rel="icon" type="image/png" sizes="32x32" href="brand/favicon-32.png">
 <link rel="icon" type="image/png" sizes="64x64" href="brand/favicon-64.png">
@@ -269,8 +287,12 @@ body.hide-lm .lm, body.hide-lm .mm-dot { display: none !important; }   /* OSD se
 .facts div { display: grid; gap: 0.1rem; padding: 0.6rem 0.8rem; background: var(--hover); border-radius: 14px; }
 .facts dt { font-size: 0.75rem; color: var(--muted); }
 .facts dd { margin: 0; font-size: 1.05rem; font-weight: 700; font-variant-numeric: tabular-nums; }
-.card-actions { margin-block-start: auto; display: grid; grid-template-columns: auto 1fr auto; gap: 0.5rem; }
+.card-actions { margin-block-start: auto; display: grid; grid-template-columns: auto 1fr auto auto; gap: 0.5rem; }
+.card-actions a.btn { display: inline-grid; place-items: center; min-inline-size: 2.9rem; color: inherit; }
+.card-actions a.btn svg { inline-size: 1.15rem; block-size: 1.15rem; }
 .card-actions .btn { min-block-size: 2.9rem; border-radius: 999px; box-shadow: none; }
+.card-actions .btn.primary { display: inline-flex; align-items: center; justify-content: center; gap: 0.45rem; }
+.card-actions .btn.primary svg { inline-size: 1.05rem; block-size: 1.05rem; flex: none; }
 .btn.primary { background: var(--accent); color: var(--accent-ink); border-color: transparent; font-weight: 700; }
 @media (hover: hover) and (pointer: fine) { .btn.primary:hover { background: color-mix(in oklch, var(--accent), black 8%); } }
 

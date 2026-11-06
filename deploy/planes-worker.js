@@ -2,6 +2,7 @@
 // POST /api/e -> anonymous usage events from viewer/app/analytics.js into Workers Analytics Engine (binding EVENTS, see
 // deploy/README.md). No cookies, no IPs stored: only the event name, up to 8 small properties, language, country.
 // Server-cheap: responses are cached at the edge for 5 s, so all visitors share one upstream request per 5 s per colo.
+import { LANDMARKS } from '../viewer/app/landmarks.js';
 const CENTER = [41.36, 19.76], RADIUS_NM = 40, TTL = 5;
 const UPSTREAMS = [
   ['adsb.lol', `https://api.adsb.lol/v2/lat/${CENTER[0]}/lon/${CENTER[1]}/dist/${RADIUS_NM}`, 'ac'],
@@ -24,6 +25,7 @@ export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
     if (url.pathname === '/api/e') return events(request, env);
+    if ((url.pathname === '/app/' || url.pathname === '/app/index.html') && url.searchParams.has('lm')) return landmarkPage(request, env, url);
     if (url.pathname !== '/api/planes') return env.ASSETS ? env.ASSETS.fetch(request) : new Response('Not found', { status: 404 });
     const cache = caches.default, key = new Request(url.origin + '/api/planes');
     const hit = await cache.match(key);
@@ -61,4 +63,28 @@ async function events(request, env) {
     });
   }
   return new Response(null, { status: 204 });
+}
+
+// ---------- landmark links: /app/?lm=pyramid gets that landmark's title, text and picture in link previews ----------
+const esc = x => String(x).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
+async function landmarkPage(request, env, url) {
+  const res = await env.ASSETS.fetch(new Request(new URL('/app/', url), request));
+  const p = LANDMARKS.find(x => x.id === url.searchParams.get('lm'));
+  if (!p || !res.ok) return res;
+  const lang = url.searchParams.get('lang') === 'sq' ? 'sq' : 'en';
+  const title = `${p.name[lang]} · Tiny Tirana`, text = p.text[lang];
+  const desc = text.length > 220 ? text.slice(0, text.lastIndexOf(' ', 217)) + '…' : text;
+  const img = `${url.origin}/app/og/lm/${p.id}.jpg`, page = `${url.origin}/app/?lm=${p.id}${lang === 'sq' ? '&lang=sq' : ''}`;
+  const set = v => ({ element(e) { e.setAttribute('content', v); } });
+  return new HTMLRewriter()
+    .on('title', { element(e) { e.setInnerContent(title); } })
+    .on('meta[name="description"], meta[property="og:description"], meta[name="twitter:description"]', set(desc))
+    .on('meta[property="og:title"], meta[name="twitter:title"]', set(title))
+    .on('meta[property="og:image"], meta[name="twitter:image"]', set(img))
+    .on('meta[property="og:image:alt"], meta[name="twitter:image:alt"]', set(`${p.name[lang]} on the Tiny Tirana map`))
+    .on('meta[property="og:url"]', set(page))
+    .on('meta[property="og:type"]', set('article'))
+    .on('link[rel="canonical"]', { element(e) { e.setAttribute('href', page); } })
+    .on('html', { element(e) { e.setAttribute('lang', lang); } })
+    .transform(res);
 }
