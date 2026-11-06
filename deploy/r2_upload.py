@@ -1,6 +1,9 @@
 """Upload a folder to R2 through the Cloudflare REST API with wrangler's OAuth login (no S3 keys needed).
 
-    python3 -I deploy/r2_upload.py LOCAL_DIR BUCKET PREFIX [--threads 32] [--skip-existing]
+    python3 -I deploy/r2_upload.py LOCAL_DIR BUCKET PREFIX [--threads 32] [--skip-existing] [--via-worker]
+
+--via-worker: through tirana.fyi/api/r2 (the Worker's bucket binding, secret in ~/.config/tirana-map/upload_key), not
+the REST API: no 1200 requests / 5 min account limit, so a full tile set goes up in minutes.
 
 Keys are PREFIX/<path relative to LOCAL_DIR's parent>, e.g. viewer/tiles_shaped -> v1/tiles_shaped/map_files/17/3_4.avif.
 --skip-existing lists the bucket first and only sends files whose size differs (a rerun after a rebuild sends changes).
@@ -42,6 +45,35 @@ def call(method, path, data=None, ctype=None):
     raise RuntimeError(f'{method} {path} failed')
 
 
+VIA = 'https://tirana.fyi/api/r2'                # --via-worker: the site's Worker writes to the bucket binding (no API rate limit)
+def via_key():
+    return open(os.path.expanduser('~/.config/tirana-map/upload_key')).read().strip()
+
+
+def via_call(method, path, data=None, ctype=None):
+    for attempt in range(8):
+        h = {'x-upload-key': via_key(), 'User-Agent': 'tiny-tirana-uploader/1.0'}
+        if ctype: h['Content-Type'] = ctype
+        r = urllib.request.Request(VIA + path, method=method, data=data, headers=h)
+        try:
+            with urllib.request.urlopen(r, timeout=120) as f: return json.load(f) if method == 'GET' else None
+        except urllib.error.HTTPError as e:
+            if e.code in (429, 500, 502, 503, 504): time.sleep(min(30, 2 ** attempt)); continue
+            raise
+        except Exception:
+            time.sleep(min(30, 2 ** attempt))
+    raise RuntimeError(f'{method} {path} failed')
+
+
+def via_listing(prefix):
+    out, cursor = {}, None
+    while True:
+        r = via_call('GET', '/list?' + urllib.parse.urlencode({'prefix': prefix, **({'cursor': cursor} if cursor else {})}))
+        for k, sz in r['objects']: out[k] = sz
+        cursor = r.get('cursor')
+        if not cursor: return out
+
+
 def listing(bucket, prefix):
     out, cursor = {}, None
     while True:
@@ -61,7 +93,8 @@ def main():
         for f in fs:
             if f.startswith('.'): continue
             p = os.path.join(d, f); files.append((p, f'{prefix}/{os.path.relpath(p, base)}'))
-    have = listing(bucket, f'{prefix}/{os.path.basename(src)}/') if '--skip-existing' in a else {}
+    via = '--via-worker' in a
+    have = (via_listing if via else (lambda p: listing(bucket, p)))(f'{prefix}/{os.path.basename(src)}/') if '--skip-existing' in a else {}
     todo = [(p, k) for p, k in files if have.get(k) != os.path.getsize(p)]
     lvl = lambda k: int(m.group(1)) if (m := re.search(r'_files/(\d+)/', k)) else -1
     todo.sort(key=lambda pk: lvl(pk[1]))                  # coarse levels first: the zoomed-out map works soonest
@@ -71,7 +104,9 @@ def main():
     def up(item):
         p, k = item
         try:
-            call('PUT', f'/accounts/{ACCT}/r2/buckets/{bucket}/objects/{urllib.parse.quote(k)}', open(p, 'rb').read(), mimetypes.guess_type(p)[0] or 'application/octet-stream')
+            body, ct = open(p, 'rb').read(), mimetypes.guess_type(p)[0] or 'application/octet-stream'
+            if via: via_call('PUT', '/o/' + urllib.parse.quote(k), body, ct)
+            else: call('PUT', f'/accounts/{ACCT}/r2/buckets/{bucket}/objects/{urllib.parse.quote(k)}', body, ct)
         except Exception:
             with _lock: failed.append(item)
             return

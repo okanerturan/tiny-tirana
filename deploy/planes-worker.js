@@ -2,6 +2,7 @@
 // POST /api/e -> anonymous usage events from viewer/app/analytics.js into Workers Analytics Engine (binding EVENTS, see
 // deploy/README.md). No cookies, no IPs stored: only the event name, up to 8 small properties, language, country.
 // Server-cheap: responses are cached at the edge for 5 s, so all visitors share one upstream request per 5 s per colo.
+import { DurableObject } from 'cloudflare:workers';
 import { LANDMARKS } from '../viewer/app/landmarks.js';
 const CENTER = [41.36, 19.76], RADIUS_NM = 40, TTL = 5;
 const UPSTREAMS = [
@@ -25,6 +26,8 @@ export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
     if (url.pathname === '/api/e') return events(request, env);
+    if (url.pathname.startsWith('/api/r2/')) return r2admin(request, env, url);
+    if (url.pathname === '/api/presence') return presence(request, env, url);
     if ((url.pathname === '/app/' || url.pathname === '/app/index.html') && url.searchParams.has('lm')) return landmarkPage(request, env, url);
     if (url.pathname !== '/api/planes') return env.ASSETS ? env.ASSETS.fetch(request) : new Response('Not found', { status: 404 });
     const cache = caches.default, key = new Request(url.origin + '/api/planes');
@@ -87,4 +90,49 @@ async function landmarkPage(request, env, url) {
     .on('link[rel="canonical"]', { element(e) { e.setAttribute('href', page); } })
     .on('html', { element(e) { e.setAttribute('lang', lang); } })
     .transform(res);
+}
+
+// ---------- tile uploads: PUT /api/r2/o/<key>, GET /api/r2/list?prefix=&cursor= (deploy/r2_upload.py --via-worker) ----------
+// Goes straight to the bucket binding, so big uploads don't queue behind the Cloudflare API rate limit. Only with the
+// secret UPLOAD_KEY (wrangler secret) in the x-upload-key header; without it, or without the secret set, 403.
+async function r2admin(request, env, url) {
+  const key = request.headers.get('x-upload-key') || '', want = env.UPLOAD_KEY || '';
+  if (!want || !env.TILES || key.length !== want.length) return new Response(null, { status: 403 });
+  let diff = 0; for (let i = 0; i < want.length; i++) diff |= key.charCodeAt(i) ^ want.charCodeAt(i);
+  if (diff) return new Response(null, { status: 403 });
+  if (request.method === 'PUT' && url.pathname.startsWith('/api/r2/o/')) {
+    const k = decodeURIComponent(url.pathname.slice('/api/r2/o/'.length));
+    if (!/^v\d+\/[\w./-]+$/.test(k)) return new Response('bad key', { status: 400 });
+    await env.TILES.put(k, request.body, { httpMetadata: { contentType: request.headers.get('content-type') || 'application/octet-stream' } });
+    return new Response(null, { status: 204 });
+  }
+  if (request.method === 'GET' && url.pathname === '/api/r2/list') {
+    const r = await env.TILES.list({ prefix: url.searchParams.get('prefix') || '', cursor: url.searchParams.get('cursor') || undefined, limit: 1000 });
+    return Response.json({ objects: r.objects.map(o => [o.key, o.size]), cursor: r.truncated ? r.cursor : null });
+  }
+  return new Response(null, { status: 405 });
+}
+
+// ---------- live counter: GET /api/presence?sid=&new=1 -> {live, total} ----------
+// One Durable Object for the whole site. A tab pings every ~30 s with its random per-tab id (the same one analytics
+// uses, gone when the tab closes); "live" = tabs seen in the last 70 s, "total" = visits counted since launch (a tab's
+// first ping says new=1). Without a sid (Do Not Track / GPC) the counts are only read, nothing is recorded.
+async function presence(request, env, url) {
+  if (!env.PRESENCE) return Response.json({ live: null, total: null });
+  const stub = env.PRESENCE.get(env.PRESENCE.idFromName('site'));
+  const r = await stub.fetch('https://presence/' + url.search);
+  return new Response(r.body, { headers: { 'content-type': 'application/json', 'cache-control': 'no-store' } });
+}
+export class Presence extends DurableObject {
+  constructor(ctx, env) { super(ctx, env); this.seen = new Map(); this.total = null; }
+  async fetch(request) {
+    const q = new URL(request.url).searchParams, now = Date.now(), sid = q.get('sid') || '';
+    if (this.total === null) this.total = (await this.ctx.storage.get('total')) || 0;
+    if (/^[a-z0-9]{4,16}$/.test(sid)) {
+      if (q.get('new') === '1' && !this.seen.has(sid)) { this.total++; await this.ctx.storage.put('total', this.total); }
+      if (q.get('bye') === '1') this.seen.delete(sid); else this.seen.set(sid, now);
+    }
+    for (const [k, t] of this.seen) if (now - t > 70000) this.seen.delete(k);
+    return Response.json({ live: Math.max(this.seen.size, sid ? 1 : 0), total: this.total });
+  }
 }

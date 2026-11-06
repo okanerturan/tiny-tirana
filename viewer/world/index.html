@@ -314,6 +314,8 @@ h1 span { display: block; color: color-mix(in oklch, var(--ft), var(--fg) 25%); 
 
 footer { padding: 0.75rem 1rem; padding-block-end: calc(0.75rem + env(safe-area-inset-bottom, 0px)); font-size: var(--text-xs); color: var(--muted); box-shadow: 0 -1px 0 var(--line); }
 footer a { color: inherit; }
+
+.other-atlases { margin-block: 2.5rem 1.5rem; } .other-atlases h2 { margin-block-end: 0.5rem; } .other-atlases ul { padding-inline-start: 1.2rem; display: grid; gap: 0.35rem; }
 </style>
 </head>
 <body>
@@ -377,6 +379,16 @@ footer a { color: inherit; }
       <div class="chips" id="chips" role="group" aria-label="Filter by how the map was made"></div>
     </div>
     <ul class="list" id="list"></ul>
+    <section class="other-atlases" aria-labelledby="oa-h">
+      <h2 id="oa-h">Other atlases</h2>
+      <p>This atlas is a map of maps. These keep their own lists, and each one has found maps the others missed:</p>
+      <ul>
+        <li><a href="https://tiny.london/world/">tiny.london/world</a>: the list kept by tiny.london, where much of this started.</li>
+        <li><a href="https://isometriccities.com">isometriccities.com</a>: a directory of isometric city maps.</li>
+        <li><a href="https://github.com/okanerturan/tiny-tirana">Tiny Tirana on GitHub</a>: the code behind <a href="../app/">our own map</a>, made with Claude.</li>
+      </ul>
+      <p>Made a map that is missing here? It belongs in all of them.</p>
+    </section>
     <footer>Gathered on 6 Nov 2026 from <a href="https://tiny.london/world/">tiny.london/world</a>, isometriccities.com, X, Hacker News, Reddit and GitHub. "How it was made" is our reading of each maker's own notes. Coastlines: Natural Earth. Made alongside <a href="../app/">Tiny Tirana</a>.</footer>
   </aside>
 </div>

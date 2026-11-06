@@ -22,16 +22,16 @@ if (all || want.includes('site')) {
   // the whole island, nudged to the right half; then hide every control and put the title on the left
   // central Tirana (Skanderbeg Square, the boulevard, the Pyramid), shifted right so the title panel doesn't cover it
   await pg.evaluate(() => { const v = window.__tt.viewer; window.__tt.go(41.3245, 19.8195, 0.11, true);
-    v.viewport.panBy(v.viewport.deltaPointsFromPixels(new OpenSeadragon.Point(-300, 0)), true); });
+    v.viewport.panBy(v.viewport.deltaPointsFromPixels(new OpenSeadragon.Point(-270, 0)), true); });
   await sleep(7000);
-  await pg.addStyleTag({ content: `.shell > *:not(#map), .navigator, .planes-layer, .tilt, #card, .toast { display: none !important; }` });
+  await pg.addStyleTag({ content: `.shell > *:not(#map), .navigator, .planes-layer, .tilt, #card, .toast, .lm { display: none !important; }` });
   await pg.evaluate(font => { const d = document.createElement('div'); d.innerHTML = `
-    <div style="position:fixed; inset-block:0; inset-inline-start:0; inline-size:560px; padding:64px 0 0 64px; font-family:${font}; color:oklch(0.24 0.01 250); z-index:9;
-      background:linear-gradient(90deg, oklch(0.97 0.01 250 / 0.92) 55%, transparent)">
-      <img src="brand/logo-96.webp" width="88" height="88" alt="" style="display:block; margin-block-end:22px">
-      <div style="font-size:76px; font-weight:800; letter-spacing:-0.02em; line-height:1">Tiny Tirana</div>
-      <div style="font-size:31px; line-height:1.3; margin-block-start:20px; max-inline-size:440px; color:oklch(0.38 0.01 250)">An isometric pixel-art map of Tirana: 30 landmarks, live planes, buses and the Dajti cable car</div>
-      <div style="display:inline-block; margin-block-start:34px; padding:10px 22px; border-radius:999px; background:oklch(0.72 0.15 65); color:oklch(0.25 0.05 65); font-size:28px; font-weight:700">tirana.fyi</div>
+    <div style="position:fixed; inset-block:0; inset-inline-start:0; inline-size:540px; padding:58px 0 0 60px; font-family:${font}; color:white; z-index:9;
+      background:oklch(0.21 0.02 250); box-shadow:24px 0 60px oklch(0 0 none / 0.35); border-start-end-radius:0;">
+      <img src="brand/logo-96.webp" width="84" height="84" alt="" style="display:block; margin-block-end:20px">
+      <div style="font-size:74px; font-weight:800; letter-spacing:-0.02em; line-height:1">Tiny Tirana</div>
+      <div style="font-size:30px; line-height:1.32; margin-block-start:20px; max-inline-size:430px; color:oklch(0.9 0.01 250)">An isometric pixel-art map of Tirana: 46 landmarks, live planes, buses and the Dajti cable car</div>
+      <div style="display:inline-block; margin-block-start:32px; padding:10px 24px; border-radius:999px; background:oklch(0.72 0.15 65); color:oklch(0.22 0.05 65); font-size:30px; font-weight:800">tirana.fyi</div>
     </div>`; document.body.append(d.firstElementChild); }, FONT);
   await sleep(800);
   await pg.screenshot({ path: path.join(OUT, 'tirana.jpg'), type: 'jpeg', quality: 86 }); await pg.close(); console.log('og/tirana.jpg');

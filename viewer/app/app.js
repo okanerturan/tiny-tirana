@@ -7,6 +7,8 @@ import { GEO } from './geo.js';
 import { initBuses } from './buses.js';
 import { initLife } from './life.js';
 import { initCableCar } from './cablecar.js';
+import { initPresence } from './presence.js';
+import { initGame } from './game.js';
 import { initTiltShift } from './tiltshift.js';
 import { track, trackLooking, trackPerf } from './analytics.js';
 
@@ -20,7 +22,7 @@ const CONFIG = {
   // separately painted areas on the same camera canvas, placed at their true position (camera px origin)
   islands: [],                                                    // the airport is part of the shaped map now
   camera: GEO.camera,                                             // viewer/app/geo.js (shared with the Python pipeline)
-  home: { lat: 41.3262, lon: 19.8196, zoom: 0.32 },
+  home: { lat: 41.32927, lon: 19.81835, zoom: 0.4 },          // Skanderbeg Square with the museum, the opera and the mosque
   features: { rotate: Q.has('rotate') },
 };
 const PROJ = makeProjection(CONFIG.camera);
@@ -29,22 +31,22 @@ const PROJ = makeProjection(CONFIG.camera);
 const STR = {
   sq: { search: 'Kërko', searchPh: 'Kërko një vend, rrugë…', goto: 'Shko te', share: 'Ndaj', about: 'Rreth hartës', rotate: 'Rrotullo',
         zoomIn: 'Zmadho', zoomOut: 'Zvogëlo', home: 'E gjithë harta', close: 'Mbyll', copied: 'Lidhja u kopjua',
-        attr: 'Të dhënat e hartës ©2026 Google · © OpenStreetMap', noResults: 'Asnjë rezultat', landmarks: 'Pika kryesore', places: 'Vende', loading: 'Duke ngarkuar…', photo: 'Foto', onMap: 'Në këtë hartë', flyHere: 'Shko atje', busLines: 'Linjat e autobusëve', shareHere: 'Shpërndaje', osm: 'Hape në OpenStreetMap', shareView: 'Një hartë izometrike pixel-art e Tiranës', prev: 'E mëparshmja', next: 'Tjetra', artCredit: 'Art: GPT Image 2.6, krijuar për këtë hartë', illustration: 'Ilustrim', views: 'Pamjet', diorama: 'Diorama', poster: 'Poster', landmarksBtn: 'Pikat kryesore', following: 'Duke ndjekur', stopFollow: 'Ndalo', follow: 'Ndiq', unfollow: 'Mos ndiq', aCar: 'një makinë', landmarksOn: 'Pikat kryesore u shfaqën', landmarksOff: 'Pikat kryesore u fshehën', aboutBrand: 'Tiny Tirana: rreth hartës', howLink: 'Si u bë kjo hartë (anglisht) →', planes: 'Avionët live', onGround: 'në tokë', demo: 'demo, jo e vërtetë', planesLive: '✈ {n} avionë live', planesNone: '✈ Asnjë avion tani', planesDemo: '✈ {n} avionë demo', buses: 'Autobusët (sipas orarit)', life: 'Makina',
+        attr: 'Të dhënat e hartës ©2026 Google · © OpenStreetMap', noResults: 'Asnjë rezultat', landmarks: 'Pika kryesore', places: 'Vende', loading: 'Duke ngarkuar…', photo: 'Foto', onMap: 'Në këtë hartë', flyHere: 'Shko atje', play: 'Luaj', gRace: 'Gara rreth qendrës', gFly: 'Fluturo me avion', gLap: 'Xhiro', gPos: 'Vendi', gBest: 'Rekordi', gGo: 'Nisu!', gPerfect: 'Nisje perfekte!', gDraft: 'Në erën e tjetrit!', gSpin: 'Shumë shpejt!', gBestLap: 'Xhiro më e mirë', gLastLap: 'Xhiroja e fundit!', gFinished: 'Mbaruat', gYou: 'Ju', gRival: 'Kundërshtar', gAgain: 'Edhe një herë', gGas: 'Gaz', gBrake: 'Frena', gAlt: 'Lartësia', gOver: 'Mbi', hereNow: 'tani këtu', visits: 'vizita', busLines: 'Linjat e autobusëve', shareHere: 'Shpërndaje', osm: 'Hape në OpenStreetMap', shareView: 'Një hartë izometrike pixel-art e Tiranës', prev: 'E mëparshmja', next: 'Tjetra', artCredit: 'Art: GPT Image 2.6, krijuar për këtë hartë', illustration: 'Ilustrim', views: 'Pamjet', diorama: 'Diorama', poster: 'Poster', landmarksBtn: 'Pikat kryesore', following: 'Duke ndjekur', stopFollow: 'Ndalo', follow: 'Ndiq', unfollow: 'Mos ndiq', aCar: 'një makinë', landmarksOn: 'Pikat kryesore u shfaqën', landmarksOff: 'Pikat kryesore u fshehën', aboutBrand: 'Tiny Tirana: rreth hartës', howLink: 'Si u bë kjo hartë (anglisht) →', planes: 'Avionët live', onGround: 'në tokë', demo: 'demo, jo e vërtetë', planesLive: '✈ {n} avionë live', planesNone: '✈ Asnjë avion tani', planesDemo: '✈ {n} avionë demo', buses: 'Autobusët (sipas orarit)', life: 'Makina',
         kinds: { landmark: 'monument', square: 'shesh', park: 'park', water: 'ujë', neighbourhood: 'lagje', place: 'vend', street: 'rrugë', building: 'ndërtesë' },
         aboutBody: `<p>Një pikturë izometrike pixel-art e qytetit të Tiranës dhe aeroportit të Rinasit, e vizatuar bllok pas blloku nga një model i trajnuar mbi pamjet 3D të qytetit.</p>
           <p>Projekt personal, jo-tregtar. Pikturuar me Qwen-Image 2.1 + LoRA <i>tiranaiso</i>. Gjeometria nga Google Photorealistic 3D Tiles; emrat nga OpenStreetMap.</p>
           <p>Bërë nga <a href="https://github.com/okanerturan" rel="noopener">@okanerturan</a> me Claude (Anthropic): Claude shkroi kodin dhe drejtoi gjithë procesin, nga trajnimi te piktura. <a href="https://github.com/okanerturan/tiny-tirana" rel="noopener">Kodi burimor në GitHub</a>.</p>
           <p>Frymëzuar nga <a href="https://tiny.london" rel="noopener">tiny.london</a>, <a href="https://isometric.nyc" rel="noopener">isometric.nyc</a> dhe <a href="https://tiny.london/world/" rel="noopener">hartat e tjera</a>. Të gjitha i kemi mbledhur në <a href="../world/">atlasin tonë të qyteteve izometrike</a>.</p>
-          <p class="privacy">Statistika anonime: pa cookies dhe pa të dhëna personale. Numërojmë cilat vende dhe funksione përdoren, sa kohë shihet harta, sa shpejt ngarkohet dhe gabimet e faqes; nga serveri ruhet vetëm shteti, jo adresa IP. Nëse shfletuesi juaj kërkon të mos ndiqet (Do Not Track / GPC), nuk dërgohet asgjë.</p>` },
+          <p class="privacy">Statistika anonime: pa cookies dhe pa të dhëna personale. Numërojmë cilat vende dhe funksione përdoren, sa kohë shihet harta, sa shpejt ngarkohet dhe gabimet e faqes; nga serveri ruhet vetëm shteti, jo adresa IP. Numëruesi “tani këtu” numëron vetëm skedat e hapura. Nëse shfletuesi juaj kërkon të mos ndiqet (Do Not Track / GPC), nuk dërgohet asgjë.</p>` },
   en: { search: 'Search', searchPh: 'Search a place, street…', goto: 'Go to', share: 'Share', about: 'About this map', rotate: 'Rotate',
         zoomIn: 'Zoom in', zoomOut: 'Zoom out', home: 'Whole map', close: 'Close', copied: 'Link copied',
-        attr: 'Map data ©2026 Google · © OpenStreetMap', noResults: 'No results', landmarksBtn: 'Landmarks', following: 'Following', stopFollow: 'Stop', follow: 'Follow', unfollow: 'Unfollow', aCar: 'a car', landmarksOn: 'Landmarks shown', landmarksOff: 'Landmarks hidden', landmarks: 'Landmarks', places: 'Places', loading: 'Loading…', photo: 'Photo', onMap: 'On this map', flyHere: 'Fly here', busLines: 'Bus lines and timetable', shareHere: 'Share', osm: 'Open in OpenStreetMap', shareView: 'An isometric pixel-art map of Tirana', prev: 'Previous', next: 'Next', artCredit: 'Art: GPT Image 2.6, made for this map', illustration: 'Illustration', views: 'Views', diorama: 'Diorama', poster: 'Poster', aboutBrand: 'Tiny Tirana: about this map', howLink: 'How this map was made →', planes: 'Live planes', onGround: 'on the ground', demo: 'demo, not real', planesLive: '✈ {n} live planes', planesNone: '✈ No planes right now', planesDemo: '✈ {n} demo planes', buses: 'Buses (timetable)', life: 'Cars',
+        attr: 'Map data ©2026 Google · © OpenStreetMap', noResults: 'No results', landmarksBtn: 'Landmarks', following: 'Following', stopFollow: 'Stop', follow: 'Follow', unfollow: 'Unfollow', aCar: 'a car', landmarksOn: 'Landmarks shown', landmarksOff: 'Landmarks hidden', landmarks: 'Landmarks', places: 'Places', loading: 'Loading…', photo: 'Photo', onMap: 'On this map', flyHere: 'Fly here', play: 'Play', gRace: 'Race around the centre', gFly: 'Fly a plane', gLap: 'Lap', gPos: 'Pos', gBest: 'Record', gGo: 'Go!', gPerfect: 'Perfect start!', gDraft: 'Slipstream!', gSpin: 'Too fast!', gBestLap: 'Best lap', gLastLap: 'Last lap!', gFinished: 'Finished', gYou: 'You', gRival: 'Rival', gAgain: 'Race again', gGas: 'Gas', gBrake: 'Brake', gAlt: 'Altitude', gOver: 'Over', hereNow: 'here now', visits: 'visits', busLines: 'Bus lines and timetable', shareHere: 'Share', osm: 'Open in OpenStreetMap', shareView: 'An isometric pixel-art map of Tirana', prev: 'Previous', next: 'Next', artCredit: 'Art: GPT Image 2.6, made for this map', illustration: 'Illustration', views: 'Views', diorama: 'Diorama', poster: 'Poster', aboutBrand: 'Tiny Tirana: about this map', howLink: 'How this map was made →', planes: 'Live planes', onGround: 'on the ground', demo: 'demo, not real', planesLive: '✈ {n} live planes', planesNone: '✈ No planes right now', planesDemo: '✈ {n} demo planes', buses: 'Buses (timetable)', life: 'Cars',
         kinds: { landmark: 'landmark', square: 'square', park: 'park', water: 'water', neighbourhood: 'area', place: 'place', street: 'street', building: 'building' },
         aboutBody: `<p>An isometric pixel-art painting of the city of Tirana and Rinas airport, drawn block by block by a model trained on the city's 3D view.</p>
           <p>Personal, non-commercial project. Painted with Qwen-Image 2.1 + the <i>tiranaiso</i> LoRA. Geometry from Google Photorealistic 3D Tiles; names from OpenStreetMap.</p>
           <p>Made by <a href="https://github.com/okanerturan" rel="noopener">@okanerturan</a> with Claude (Anthropic): Claude wrote the code and ran the whole pipeline, from training to the painting. <a href="https://github.com/okanerturan/tiny-tirana" rel="noopener">Source on GitHub</a>.</p>
           <p>Inspired by <a href="https://tiny.london" rel="noopener">tiny.london</a>, <a href="https://isometric.nyc" rel="noopener">isometric.nyc</a> and <a href="https://tiny.london/world/" rel="noopener">the other maps</a>. We collected them all in <a href="../world/">our atlas of isometric cities</a>.</p>
-          <p class="privacy">Anonymous statistics: no cookies and no personal data. We count which places and features get used, how long the map is looked at, how fast it loads and page errors; the server keeps only the country, never the IP address. If your browser asks not to be tracked (Do Not Track / GPC), nothing is sent.</p>` },
+          <p class="privacy">Anonymous statistics: no cookies and no personal data. We count which places and features get used, how long the map is looked at, how fast it loads and page errors; the server keeps only the country, never the IP address. The “here now” counter counts open tabs, nothing more. If your browser asks not to be tracked (Do Not Track / GPC), nothing is sent.</p>` },
 };
 const store = { get: k => { try { return localStorage.getItem(k); } catch { return null; } }, set: (k, v) => { try { localStorage.setItem(k, v); } catch {} } };
 let lang = Q.get('lang') || store.get('lang') || ((navigator.language || '').startsWith('sq') ? 'sq' : 'en');
@@ -79,26 +81,41 @@ const tileIndex = async layer => {
 const dzi = layer => { const e = ext(layer), w = layer.width ?? M.width, h = layer.height ?? M.height;
   const src = { width: w, height: h, tileSize: layer.tileSize ?? M.tileSize, tileOverlap: layer.overlap ?? M.overlap, minLevel: 8,
     maxLevel: Math.ceil(Math.log2(Math.max(w, h))), getTileUrl: (l, x, y) => `${layer.base}_files/${l}/${x}_${y}.${e}${TILE_REV}` };
+  // decode each tile before OSD draws it (img.decode() runs off the main thread), so zooming doesn't stutter on first paint
+  src.downloadTileStart = ctx => { const d = ctx.userData, img = new Image(); d.image = img; d.request = null; img.decoding = 'async';
+    const done = err => { img.onload = img.onerror = img.onabort = null; ctx.finish(err ? null : img, null, err); };
+    img.onload = () => (img.decode ? img.decode().then(() => done(), () => done()) : done());
+    img.onerror = img.onabort = () => done('Image load failed'); img.src = ctx.src; };
+  src.downloadTileAbort = ctx => { const img = ctx.userData.image; if (img) { img.onload = img.onerror = img.onabort = null; img.src = ''; } };
   if (layer.has) src.tileExists = (l, x, y) => { const t = layer.has[l]; if (!t) return true; const i = y * t.cols + x; return x < t.cols && !!(t.bits[i >> 3] & (1 << (i & 7))); };
   return src; };
 await Promise.all([M, ...CONFIG.islands].map(tileIndex));
 if (M.has?.[maxLevel]) setPainted({ origin: CONFIG.canvasOrigin, cell: M.tileSize, ...M.has[maxLevel] });   // vehicles only where it's painted
 await new Promise(r => (window.OpenSeadragon ? r() : addEventListener('load', r, { once: true })));
 const MAX_ZOOM = 0.8;   // image px per screen px
+// Phones: draw at most 2 device px per css px (a 3x screen would fetch, decode and paint 2.25x the pixels for detail
+// the eye can't see at arm's length).
+const TOUCH = matchMedia('(pointer: coarse)').matches;
+if (TOUCH) OpenSeadragon.pixelDensity = Math.min(OpenSeadragon.pixelDensity || 1, 2);
 const viewer = OpenSeadragon({
   element: document.getElementById('map'), tileSources: dzi(M),
   showNavigationControl: false, maxZoomPixelRatio: MAX_ZOOM,   // closer than this the painting starts to read as a photo
-  showNavigator: true, navigatorId: 'minimap', navigatorAutoResize: true, navigatorAutoFade: false, navigatorDisplayRegionColor: 'transparent', minZoomImageRatio: 0.85, visibilityRatio: 0.6, constrainDuringPan: true,
-  // snappy zoom (like Isometric Istanbul): short springy animation, big wheel steps, tiles appear without a fade
-  imageLoaderLimit: 12, maxImageCacheCount: 600, immediateRender: false, blendTime: 0, animationTime: 0.45, springStiffness: 12,
-  zoomPerScroll: 1.45, zoomPerClick: 2,
-  preserveImageSizeOnResize: true, gestureSettingsMouse: { clickToZoom: false, dblClickToZoom: true }, gestureSettingsTouch: { pinchRotate: false },
+  showNavigator: !TOUCH, navigatorId: 'minimap',   // phones hide the minimap: don't run its second viewer at all
+  navigatorAutoResize: true, navigatorAutoFade: false, navigatorDisplayRegionColor: 'transparent', minZoomImageRatio: 0.85, visibilityRatio: 0.6, constrainDuringPan: true,
+  // smooth and responsive like Isometric Istanbul: gentle wheel steps, a 0.6 s spring, flick momentum when panning, the
+  // needed level straight away (no blurry-to-sharp ladder, no fade), all tile downloads in parallel. Phones keep fewer
+  // decoded tiles in memory.
+  imageLoaderLimit: 0, maxImageCacheCount: TOUCH ? 220 : 600, immediateRender: true, blendTime: 0, animationTime: 0.6, springStiffness: 9,
+  zoomPerScroll: 1.25, zoomPerClick: 2, timeout: 60000,
+  preserveImageSizeOnResize: true, gestureSettingsMouse: { clickToZoom: false, dblClickToZoom: true, flickEnabled: true, flickMinSpeed: 120, flickMomentum: 0.25 },
+  gestureSettingsTouch: { pinchRotate: false, flickEnabled: true, flickMinSpeed: 120, flickMomentum: 0.25 },
   crossOriginPolicy: false,
 });
 const item = () => viewer.world.getItemAt(0);
 { const corner = document.createElement('div'); corner.className = 'corner';
   const pc = document.getElementById('planesChip'); pc.before(corner);
-  corner.append(document.getElementById('busesChip'), pc, document.querySelector('.attr')); }
+  const pr = document.createElement('button'); pr.type = 'button'; pr.className = 'presence'; pr.id = 'presence'; pr.hidden = true;
+  corner.append(pr, document.getElementById('busesChip'), pc, document.querySelector('.attr')); }
 // It's a map, not a document: no context menu, copy, cut or paste (except in the search box and other text fields).
 const editable = t => t instanceof Element && t.closest('input, textarea, [contenteditable="true"]');
 for (const ev of ['contextmenu', 'copy', 'cut', 'paste', 'dragstart']) document.addEventListener(ev, e => { if (!editable(e.target)) e.preventDefault(); });
@@ -153,6 +170,7 @@ viewer.addHandler('open', () => {
     imgAt: (lat, lon, h) => { const [u, v] = PROJ.toPx(lat, lon, h); return [u - ox, v - oy]; } });
   initLife({ viewer, item, origin: CONFIG.canvasOrigin, button: document.getElementById('lifeBtn'), avif: AVIF }).catch(e => console.warn('[life]', e));
   initCableCar({ viewer, item, origin: CONFIG.canvasOrigin }).catch(e => console.warn('[cablecar]', e));
+  initGame({ viewer, item, origin: CONFIG.canvasOrigin, t, button: document.getElementById('playBtn'), toast, landmarks: () => LANDMARKS, nm, toCamera: (lat, lon) => PROJ.toPx(lat, lon, GROUND) });
   initBuses({ viewer, item, button: document.getElementById('busesBtn'), chip: document.getElementById('busesChip'), origin: CONFIG.canvasOrigin, lang: () => lang });
   // tilt-shift only with a mouse: on phones the blur bands fight the pinch zoom and the bottom sheet (and cost battery)
   if (matchMedia('(pointer: coarse)').matches) document.getElementById('tsBtn').hidden = true;
@@ -184,7 +202,12 @@ const ALIAS = { skanderbeg: 'skenderbej', scanderbeg: 'skenderbej', pyramid: 'pi
 const norm = s => s.normalize('NFD').replace(/\p{M}/gu, '').toLowerCase().replace(/[^\p{L}\p{N}]+/gu, ' ').trim();
 let index = null, indexing = null;
 const loadIndex = () => indexing ??= fetch('search.json').then(r => r.json()).then(d => {
-  index = d.items.map(([name, alt, kind, lat, lon]) => ({ name, alt, kind, lat, lon, key: norm(`${name} ${alt}`) }));
+  // our landmarks first-class: both languages match, the current one shows, choosing one opens its card; OSM entries
+  // with the same name are dropped
+  const lmNames = new Set(LANDMARKS.flatMap(p => [norm(p.name.sq), norm(p.name.en)]));
+  const lms = LANDMARKS.map(p => ({ lm: p, name: p.name.sq, alt: p.name.en, kind: 'landmark', lat: p.lat, lon: p.lon, key: norm(`${p.name.sq} ${p.name.en}`) }));
+  index = lms.concat(d.items.map(([name, alt, kind, lat, lon]) => ({ name, alt, kind, lat, lon, key: norm(`${name} ${alt}`) }))
+    .filter(it => !lmNames.has(norm(it.name)) && !(it.alt && lmNames.has(norm(it.alt)))));
 });
 function search(q) {
   const toks = norm(q).split(' ').filter(Boolean); if (!toks.length || !index) return [];
@@ -215,7 +238,7 @@ function renderResults() {
   else if (!hits.length) { const li = document.createElement('li'); li.className = 'empty'; li.textContent = t('noResults'); resEl.append(li); }
   hits.forEach((h, i) => {
     const li = document.createElement('li'); li.id = `r${i}`; li.setAttribute('role', 'option'); li.setAttribute('aria-selected', String(i === sel));
-    const name = document.createElement('span'); name.textContent = h.name;
+    const name = document.createElement('span'); name.textContent = h.lm ? nm(h.lm) : h.name;
     const kind = document.createElement('small'); kind.textContent = t('kinds')[h.kind];
     li.append(name, kind); li.addEventListener('pointerdown', e => { e.preventDefault(); choose(i); });
     resEl.append(li);
@@ -225,6 +248,7 @@ function renderResults() {
 }
 function choose(i) {
   const h = hits[i]; if (!h) return;
+  if (h.lm) { track('search', { found: true, kind: 'card' }); qEl.value = nm(h.lm); hits = []; sel = -1; renderResults(); qEl.blur(); openCard(h.lm); return; }
   go(h.lat, h.lon, KIND_ZOOM[h.kind]); dropPin(h.lat, h.lon, h.name); track('search', { found: true, kind: h.kind });
   qEl.value = h.name; hits = []; sel = -1; renderResults(); qEl.blur();
 }
@@ -249,7 +273,7 @@ const EXTRA = [
 ];
 const nm = p => p.name[lang];
 const pic = (base, alt, cls = '', sizes = '') => `<picture><source type="image/avif" srcset="lm/${base}.avif"><img ${cls ? `class="${cls}"` : ''} src="lm/${base}.webp" alt="${alt}" decoding="async" ${sizes}></picture>`;
-const iconPic = (id, alt = '') => `<picture><source type="image/avif" srcset="lm/${id}-icon96.avif 1x, lm/${id}-icon192.avif 2x"><img src="lm/${id}-icon96.webp" srcset="lm/${id}-icon192.webp 2x" alt="${alt}" width="96" height="96" decoding="async"></picture>`;
+const iconPic = (id, alt = '') => `<picture><source type="image/avif" srcset="lm/${id}-icon96.avif 1x, lm/${id}-icon192.avif 2x"><img src="lm/${id}-icon96.webp" srcset="lm/${id}-icon192.webp 2x" alt="${alt}" width="96" height="96" decoding="async" loading="lazy"></picture>`;
 
 // ---------------- landmark markers ----------------
 // Each marker floats just above the TOP of its own landmark (heights from the 3D model, landmarks.js `top`) with a stem
@@ -493,6 +517,7 @@ document.querySelector('.side')?.addEventListener('click', e => {
   const b = e.target.closest('.btn[aria-pressed]'); if (b) setTimeout(() => track('toggle', { id: b.id.replace(/Btn$/, ''), on: b.getAttribute('aria-pressed') === 'true' }), 0);
 });
 trackPerf(viewer);
+const presenceCtl = initPresence({ el: document.getElementById('presence'), t, lang: () => lang });
 trackLooking(() => { const it = item(); if (!it) return null; const c = it.viewportToImageCoordinates(viewer.viewport.getCenter(true)), [lat, lon] = toLatLon(c.x, c.y);
   return { lat, lon, z: it.viewportToImageZoom(viewer.viewport.getZoom(true)) }; });
 

@@ -7,7 +7,7 @@ const { LANDMARKS } = await import('data:text/javascript;base64,' + Buffer.from(
 const esc = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;');
 const items = LANDMARKS.map(p => `  <li><a href="./?lm=${p.id}&amp;lang=en"><strong>${esc(p.name.en)}</strong></a>${p.name.sq !== p.name.en ? ` <span lang="sq">(${esc(p.name.sq)})</span>` : ''}: ${esc(p.kind.en)}</li>`).join('\n');
 const block = `<!-- lm-list -->
-<h2 id="landmarks">18. The landmarks</h2>
+<h2 id="landmarks">19. The landmarks</h2>
 <p>Every landmark has a card with its story, a diorama and a poster drawn for this map, a photo where a freely licensed one exists, and its place on the painting. Each link below opens the map with that card, and it is also the link to share.</p>
 <ul class="lm-index">
 ${items}

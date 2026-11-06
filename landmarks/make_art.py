@@ -12,6 +12,13 @@ DATA = os.path.join(ROOT, '..', 'data', 'landmarks')
 EDIT = 'openai/gpt-image-2.6/flare/edit'
 WD = json.load(open(os.path.join(DATA, 'wikidata.json')))
 NAMES = {  # display names used in prompts (English, as on Wikidata, plus a hint where it helps the model)
+    'villa31': "Enver Hoxha's former villa in Tirana's Blloku district",
+    'sacredheart': 'the Sacred Heart Catholic Church on Rruga e Kavajës in Tirana',
+    'mosaic': 'the Tirana Mosaic, an excavated Roman-era floor mosaic under a modern roof',
+    'procopius': 'St Procopius Church, a small Orthodox church in the Grand Park of Tirana',
+    'intlhotel': 'the Tirana International Hotel on Skanderbeg Square',
+    'olympic': 'the Olympic Park sports complex in Tirana',
+    'stermasi': 'Selman Stërmasi football stadium in Tirana',
     'dajtitop': 'the upper station of the Dajti Ekspres cable car and the round Dajti Tower Belvedere hotel on Mount Dajti',
     'teg': 'TEG, Tirana East Gate shopping centre',
     'bunkart1': "Bunk'Art 1, the Cold War bunker museum at the foot of Mount Dajti",
@@ -48,6 +55,13 @@ NAMES = {  # display names used in prompts (English, as on Wikidata, plus a hint
     'postbllok': 'the Postbllok memorial (bunker, concrete pillars and Berlin Wall segment)', 
     'stadium': 'the Air Albania Stadium (with its tower)', 'lake': 'Tirana Artificial Lake', 'park': 'the Grand Park of Tirana'}
 FEATURES = {
+    'villa31': 'a modernist 1970s villa with flat roofs, pale walls and big windows, behind a wall in a leafy garden.',
+    'sacredheart': 'a pale neo-romanesque church with a tall bell tower and a rose window, on a city street.',
+    'mosaic': 'an open archaeological site with a colourful ancient floor mosaic of geometric patterns and fish, under a light modern canopy, with paths around it.',
+    'procopius': 'a small stone Orthodox church with a red tiled roof, a small dome and a bell tower among pine trees in a park.',
+    'intlhotel': 'a tall plain 1970s hotel tower block on the edge of a big square, flags in front.',
+    'olympic': 'a modern sports hall and outdoor courts and a running track among trees.',
+    'stermasi': 'a compact football stadium with stands on two sides, a green pitch and floodlights, in a city block.',
     'dajtitop': 'a round multi-storey glass-topped hotel tower and a small cable-car station with red gondolas arriving, on a green forested mountain plateau, mountain slopes behind.',
     'teg': 'a large modern shopping mall with a tall glass entrance canopy on slanted steel legs, a wide plaza and parking in front.',
     'bunkart1': 'a concrete bunker entrance tunnelled into a forested hillside, a heavy steel door and a small colourful sign, a few old army trucks nearby.',
@@ -88,6 +102,13 @@ FEATURES = {
     'postbllok': 'a small domed concrete bunker, a few tall concrete mine-shaft pillars and a painted segment of the Berlin Wall, in a green corner.',
     'stadium': 'a modern football stadium with a red, white and grey facade and a tall slim hotel tower rising from one corner.'}
 COMPOSE = {  # varied compositions for the graphic prints, so the set isn't ten sun discs
+    'villa31': 'The villa half-hidden behind its garden wall, evening light.',
+    'sacredheart': 'The bell tower soaring up, rose window glowing.',
+    'mosaic': 'The mosaic pattern seen from above as bold tiles.',
+    'procopius': 'The little church framed by tall pines.',
+    'intlhotel': 'The tower rising over the square, long shadows.',
+    'olympic': 'Running track curves as bold stripes. No Olympic rings, logos, flags or text anywhere.',
+    'stermasi': 'Floodlights fanning over the pitch.',
     'dajtitop': 'Gondola gliding up to the station, the round tower against the sky.',
     'teg': 'The glass canopy as a bold angular shape, evening lights.',
     'bunkart1': 'A dark tunnel mouth in the hillside, strong shadow, a single bulb.',

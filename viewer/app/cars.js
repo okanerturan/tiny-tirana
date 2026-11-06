@@ -20,7 +20,7 @@
 import { vehiclePx, busesNow, carsNow, follow } from './vehicles.js';
 
 const SQ = Math.SQRT1_2, DEG = 180 / Math.PI;
-const MAX_CARS = 340;                                     // city-wide; density below keeps it a calm Sunday morning
+const MAX_CARS = matchMedia('(pointer: coarse)').matches ? 170 : 340;   // city-wide (phones: half, their CPUs pay per car per frame)
 const SPEED = [12, 10, 8.5];                              // m/s: primary/trunk, secondary, tertiary
 const DENSITY = [6, 3, 3];                                // cars per km of road (both directions): a calm Sunday morning
 const LANE_OFF = 1.7, LANE_W = 3.2, CAR_GAP = 6.4, HEADWAY = 1.2;   // m right of the centre line (two-way), lane width, gap, s
@@ -557,8 +557,8 @@ export function makeCars({ roads, meta, sheet, rnd, viewer, origin, redraw }) {
       viewer.element.append(tip);
       tip.addEventListener('click', e => {
         if (!e.target.closest('.bus-follow') || !open) return;
-        if (open === followed) { follow.stop(); endFollow(); } else startFollow(open);
-        tipKey = ''; placeTip();
+        if (open === followed) { follow.stop(); endFollow(); tipKey = ''; placeTip(); }
+        else { startFollow(open); open = null; tip.hidden = true; }      // following: the top chip (Following a car · Stop) is the one control
       });
     }
     open = c; tipKey = ''; tip.hidden = false; redraw();
@@ -578,7 +578,7 @@ export function makeCars({ roads, meta, sheet, rnd, viewer, origin, redraw }) {
   viewer.addHandler('canvas-click', e => {
     if (!e.quick || !enabled) return;
     const c = hit(e.position.x, e.position.y, e.pointerType === 'touch' || coarse.matches);
-    if (c) { e.preventDefaultAction = true; openTip(c); } else if (open) closeTip();
+    if (c) { e.preventDefaultAction = true; if (c !== followed) openTip(c); } else if (open) closeTip();   // the followed car has no pill (the top chip stops it)
   });
   addEventListener('keydown', e => { if (e.key === 'Escape' && open) closeTip(true); });
   let enabled = true;

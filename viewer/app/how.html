@@ -168,6 +168,7 @@ footer { padding-block-start: 1rem; border-block-start: 1px solid var(--line); f
   <li><a href="#shape">The shape of Tirana</a></li>
   <li><a href="#dajti">Dajti and the cable car</a></li>
   <li><a href="#who">Who made this, and more maps</a></li>
+  <li><a href="#fast">Fast on phones</a></li>
   <li><a href="#landmarks">The landmarks</a></li>
 </ol>
 
@@ -384,7 +385,7 @@ colab stop -s tirana                           # stop paying</code></pre>
 <p><strong>Data:</strong> 3D geometry and textures © 2026 Google (Photorealistic 3D Tiles). Place and street names © <a href="https://www.openstreetmap.org/copyright">OpenStreetMap contributors</a> (ODbL).</p>
 <p><strong>Models:</strong> Qwen-Image 2.1 Turbo (Alibaba, Qwen Research Licence, non-commercial). The LoRA started from tiny.london's published LoRA (non-commercial). Teacher drawings by GPT Image 2.5 via fal.ai; the style example was drawn by FLUX.2 Max.</p>
 <p><strong>Tools:</strong> three.js, 3d-tiles-renderer, Puppeteer, ai-toolkit (ostris), OpenSeadragon, Google Colab.</p>
-<p id="privacy"><strong>Privacy:</strong> the map keeps anonymous, cookieless statistics, so we can see which places and features people use. That covers visits (Cloudflare Web Analytics) and a few events: which landmark card was opened, which layer was switched, whether a search found something, how long a card stays open, and every 30 seconds the map centre rounded to about 1 km. It also counts how long the map is visible, how fast the first tiles load and the frame rate, script errors, the window width in 100 px steps, touch or mouse, and the browser language. The server keeps the country only, never the IP address. There is no cookie, no persistent ID and no search text. A random number groups one visit's events and disappears when the tab closes. If your browser sends Do Not Track or Global Privacy Control, nothing is sent at all. The live-plane positions come from public ADS-B feeds (adsb.lol, adsb.fi).</p>
+<p id="privacy"><strong>Privacy:</strong> the map keeps anonymous, cookieless statistics, so we can see which places and features people use. That covers visits (Cloudflare Web Analytics) and a few events: which landmark card was opened, which layer was switched, whether a search found something, how long a card stays open, and every 30 seconds the map centre rounded to about 1 km. It also counts how long the map is visible, how fast the first tiles load and the frame rate, script errors, the window width in 100 px steps, touch or mouse, and the browser language. The server keeps the country only, never the IP address. The "here now" counter counts open tabs by the same random per-tab number, and keeps only a running total of visits. There is no cookie, no persistent ID and no search text. A random number groups one visit's events and disappears when the tab closes. If your browser sends Do Not Track or Global Privacy Control, nothing is sent at all. The live-plane positions come from public ADS-B feeds (adsb.lol, adsb.fi).</p>
 <h2 id="shape">15. The shape of Tirana</h2>
 <p>The painting was made in square blocks, so its raw outline is a staircase of rectangles. The map you see is cut to the shape of the city instead, with clouds around it, the way tiny.london does it.</p>
 <ul>
@@ -403,8 +404,19 @@ colab stop -s tirana                           # stop paying</code></pre>
 <p>The code is on <a href="https://github.com/okanerturan/tiny-tirana">GitHub</a>. The painting, the model and the Google-derived material stay non-commercial (see Credits).</p>
 <p><strong>More maps:</strong> our <a href="../world/">atlas of isometric cities</a> puts every map we know on a globe, with how each was made. tiny.london keeps its own list at <a href="https://tiny.london/world/">tiny.london/world</a>, the atlas that started it. If you made one and it is missing, it should be in both.</p>
 
+<h2 id="fast">18. Fast on phones</h2>
+<p>A friend opened the map on his phone and found it slow, so we measured: phone emulation (390 × 844 at 3× density), the CPU slowed 4–6×, a 4G connection, and a script of zooms and pans.</p>
+<ul>
+  <li><strong>Fewer pixels.</strong> A 3× screen asked for tiles at 3 device pixels per CSS pixel. Capped at 2×, the first view needs half the tile bytes (3.0 → 1.5 MB), and it is sharp in 3.9 s instead of 5.9 s on 4G.</li>
+  <li><strong>The right level first.</strong> Phones load the detail level they need straight away instead of climbing from blurry to sharp, and decode each tile before drawing it, off the main thread.</li>
+  <li><strong>No frosted glass on phones.</strong> Blurring the moving map under every panel, every frame, is the most expensive thing a phone GPU did here.</li>
+  <li><strong>Less work per frame.</strong> The cable car went from about 400 canvas calls a frame to three; hidden layers stop simulating; phones run half as many cars; the hidden minimap no longer runs a second viewer.</li>
+  <li><strong>Smooth, not jumpy.</strong> Zoom follows Isometric Istanbul's settings: gentle wheel steps, a short spring, and momentum when you flick the map.</li>
+</ul>
+<p>With the CPU slowed 6×, the slowest frame during the zoom script went from 200 ms to about 50 ms, with no janky frames left.</p>
+
 <!-- lm-list -->
-<h2 id="landmarks">18. The landmarks</h2>
+<h2 id="landmarks">19. The landmarks</h2>
 <p>Every landmark has a card with its story, a diorama and a poster drawn for this map, a photo where a freely licensed one exists, and its place on the painting. Each link below opens the map with that card, and it is also the link to share.</p>
 <ul class="lm-index">
   <li><a href="./?lm=statue&amp;lang=en"><strong>Skanderbeg Monument</strong></a> <span lang="sq">(Monumenti i Skënderbeut)</span>: Monument · 1968</li>
@@ -446,6 +458,13 @@ colab stop -s tirana                           # stop paying</code></pre>
   <li><a href="./?lm=zoo&amp;lang=en"><strong>Tirana Zoo</strong></a> <span lang="sq">(Kopshti Zoologjik)</span>: Zoo · reopened 2022</li>
   <li><a href="./?lm=paskuqan&amp;lang=en"><strong>Paskuqan Lake</strong></a> <span lang="sq">(Liqeni i Paskuqanit)</span>: Lake and park</li>
   <li><a href="./?lm=thate&amp;lang=en"><strong>Dry Lake</strong></a> <span lang="sq">(Liqeni i Thatë)</span>: Lake</li>
+  <li><a href="./?lm=villa31&amp;lang=en"><strong>Enver Hoxha's Villa</strong></a> <span lang="sq">(Vila e Enver Hoxhës)</span>: Villa · arts centre since 2025</li>
+  <li><a href="./?lm=sacredheart&amp;lang=en"><strong>Sacred Heart Church</strong></a> <span lang="sq">(Kisha e Zemrës së Krishtit)</span>: Catholic church · 1939</li>
+  <li><a href="./?lm=mosaic&amp;lang=en"><strong>Tirana Mosaic</strong></a> <span lang="sq">(Mozaiku i Tiranës)</span>: Archaeological site · Roman era</li>
+  <li><a href="./?lm=procopius&amp;lang=en"><strong>St Procopius Church</strong></a> <span lang="sq">(Kisha e Shën Prokopit)</span>: Orthodox church · 1945</li>
+  <li><a href="./?lm=intlhotel&amp;lang=en"><strong>Tirana International Hotel</strong></a> <span lang="sq">(Hotel Tirana International)</span>: Hotel · 1979</li>
+  <li><a href="./?lm=olympic&amp;lang=en"><strong>Olympic Park</strong></a> <span lang="sq">(Parku Olimpik)</span>: Sports complex · 2017</li>
+  <li><a href="./?lm=stermasi&amp;lang=en"><strong>Selman Stërmasi Stadium</strong></a> <span lang="sq">(Stadiumi Selman Stërmasi)</span>: Stadium · 1956</li>
 </ul>
 <!-- /lm-list -->
 

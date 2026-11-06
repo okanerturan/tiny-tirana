@@ -396,7 +396,7 @@ export function initBuses({ viewer, item, button, chip, origin, lang: getLang })
       + `<p class="bus-tip-name">${tx('line')} ${esc(r.short)} · ${esc(r.long)}</p>`
       + `<p>${next ? `${tx('next')}: <strong>${esc(next)}</strong> · ${eta}` : tx('end')}</p>`
       + `<p class="bus-tip-note">${demo ? tx('demoNote') : tx('notLive')}</p>`
-      + `<p class="bus-tip-act"><button type="button" class="bus-follow" aria-pressed="${s === followed}">${s === followed ? tx('unfollow') : tx('follow')}</button></p>`;
+      + (s === followed ? '' : `<p class="bus-tip-act"><button type="button" class="bus-follow" aria-pressed="false">${tx('follow')}</button></p>`);   // while following, the top chip's Stop is the one control
   }
   let tipNext = -2, tipW = 0, tipH = 0;
   function openTip(s) { open = s; tipNext = -2; tip.hidden = false; placeTip(); }

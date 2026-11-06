@@ -20,6 +20,7 @@ export const enabled = !optedOut && (!devHost || q.get('analytics') === 'dev');
 
 let sid = null;
 try { sid = sessionStorage.getItem('tt-sid'); if (!sid) { sid = Math.random().toString(36).slice(2, 10); sessionStorage.setItem('tt-sid', sid); } } catch { sid = 'nosession'; }
+export const sessionId = () => (sid && sid !== 'nosession' ? sid : null);
 const queue = [];
 const clean = v => typeof v === 'number' ? (Number.isFinite(v) ? Math.round(v * 1000) / 1000 : null)
   : typeof v === 'boolean' ? v : v == null ? null : String(v).slice(0, 40);

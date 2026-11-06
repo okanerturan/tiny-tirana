@@ -37,7 +37,7 @@ async function open(q = '', hash = '', vp = { width: 1440, height: 900 }) {
   const labels = await pg.$$eval('.side .btn:not([hidden])', l => l.map(x => x.getAttribute('aria-label')));
   ok('side buttons all labelled', labels.every(x => x && x !== 'undefined'), labels.join(', '));
   // every visible toggle flips aria-pressed and back without errors
-  for (const id of await pg.$$eval('.side .btn[aria-pressed]:not([hidden])', l => l.map(x => x.id))) {
+  for (const id of await pg.$$eval('.side .btn[aria-pressed]:not([hidden]):not(#playBtn)', l => l.map(x => x.id))) {   // Play opens a menu
     const before = await pg.$eval('#' + id, x => x.getAttribute('aria-pressed'));
     await pg.click('#' + id); await sleep(500); const mid = await pg.$eval('#' + id, x => x.getAttribute('aria-pressed'));
     await pg.click('#' + id); await sleep(500); const after = await pg.$eval('#' + id, x => x.getAttribute('aria-pressed'));

@@ -207,14 +207,16 @@ export async function initLife({ viewer, item, origin, button, avif, base = 'lif
     return true;
   }
   const byY = (a, b) => a.y - b.y;
+  let lifeDirty = true;
   function draw() {
     if (!transform()) return;
     const t0 = performance.now();
-    ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.clearRect(0, 0, cv.width, cv.height);
+    if (tz < Z_MIN && !lifeDirty) return;                       // hidden and already cleared: nothing to do
+    ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.clearRect(0, 0, cv.width, cv.height); lifeDirty = false;
     stats.drawn = 0;
     const k = tz * dpr, ox = tox * dpr - origin[0] * k, oy = toy * dpr - origin[1] * k;   // camera px -> device px
-    if (!reduce.matches) stats.drawn += migrants.draw(ctx, k, ox, oy, cv.width, cv.height, dpr, simT);   // high in the sky, any zoom
     if (tz < Z_MIN) { stats.ms = stats.ms * 0.9 + (performance.now() - t0) * 0.1; return; }
+    lifeDirty = true;
     ctx.save(); clipToPainting(ctx, k, ox, oy);               // ground life only on the painting
     ctx.globalAlpha = Math.min(1, (tz - Z_MIN) / (Z_FULL - Z_MIN));
     ctx.imageSmoothingEnabled = k < 1.2; ctx.imageSmoothingQuality = 'high';
@@ -284,7 +286,7 @@ export async function initLife({ viewer, item, origin, button, avif, base = 'lif
     const dt = Math.min(MAX_DT, last ? (t - last) / 1000 : 0); last = t;
     const t0 = performance.now();
     if (!reduce.matches) {
-      simT += dt; stepBirds(dt); if (on) traffic?.step(dt);
+      simT += dt; if (tz >= Z_MIN) { stepBirds(dt); if (on) traffic?.step(dt); }   // hidden when zoomed out: no simulation either
       migrants.step(dt, [(W / 2 - tox) / tz + origin[0], ((H / 2 - toy) / tz + origin[1]) / SQ]);
     }
     stats.sim = stats.sim * 0.9 + (performance.now() - t0) * 0.1;

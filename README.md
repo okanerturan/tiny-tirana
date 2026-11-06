@@ -2,7 +2,7 @@
 
 An isometric pixel-art map of Tirana, Albania, painted block by block by a diffusion model that was trained on the
 city's own 3D view. Live planes, buses on the real timetable, cars, ducks on the lake, a cable car up Mount Dajti, and
-30 landmarks with their own cards.
+46 landmarks with their own cards.
 
 **Map:** [tirana.fyi](https://tirana.fyi) · **How it was made:** [tirana.fyi/app/how.html](https://tirana.fyi/app/how.html) ·
 **Atlas of isometric cities:** [tirana.fyi/world/](https://tirana.fyi/world/)

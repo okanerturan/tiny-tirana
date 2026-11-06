@@ -64,6 +64,10 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             self.send_header('Content-Type', 'application/json'); self.send_header('Cache-Control', 'public, max-age=4')
             self.send_header('Content-Length', str(len(body))); self.end_headers(); self.wfile.write(body)
             return
+        if self.path.split('?')[0] == '/api/presence':      # dev stand-in for the Worker's Durable Object counter
+            body = b'{"live": 1, "total": 1}'
+            self.send_response(200); self.send_header('Content-Type', 'application/json'); self.send_header('Cache-Control', 'no-store')
+            self.send_header('Content-Length', str(len(body))); self.end_headers(); self.wfile.write(body); return
         super().do_GET()
 
     def do_POST(self):

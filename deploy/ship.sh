@@ -2,6 +2,7 @@
 # Build dist/ and deploy the Worker. A running R2 tile upload is paused first (Cloudflare's API rate limit is shared:
 # 1200 requests / 5 min) and restarted after the deploy (it resumes: --skip-existing).
 cd "$(dirname "$0")/.."
+for f in viewer/app/*.js deploy/planes-worker.js; do node --check "$f" || { echo "REFUSING TO SHIP: syntax error in $f"; exit 1; }; done
 up=$(pgrep -f "deploy/r2_upload.py" >/dev/null && echo 1); pkill -f "deploy/r2_upload.py"
 bash deploy/build_site.sh
 for i in 1 2 3 4 5 6 7 8 9 10; do

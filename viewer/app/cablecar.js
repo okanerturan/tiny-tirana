@@ -27,16 +27,18 @@ export async function initCableCar({ viewer, item, origin, base = 'life/' }) {
   const at = (c, s) => { const f = Math.max(0, Math.min(c.u.length - 1.001, s / STEP)), i = Math.floor(f), t = f - i;
     return [c.u[i] + (c.u[i + 1] - c.u[i]) * t, c.v[i] + (c.v[i + 1] - c.v[i]) * t]; };
   const P0 = new OpenSeadragon.Point(0, 0), P1 = new OpenSeadragon.Point(1000, 0);
-  let onScreen = false;
+  let onScreen = false, dirty = false, lastT = 0;
 
   function draw() {
     const it = item(); if (!it) return;
     if (cv.width !== Math.round(viewer.container.clientWidth * Math.min(2, devicePixelRatio || 1))) resize();
     const p0 = it.imageToViewerElementCoordinates(P0), p1 = it.imageToViewerElementCoordinates(P1);
     const k = (p1.x - p0.x) / 1000, ox = p0.x - origin[0] * k, oy = p0.y - origin[1] * k;   // camera px -> css px
-    ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.clearRect(0, 0, cv.width, cv.height);
     onScreen = ox + bx1 * k > 0 && ox + bx0 * k < W && oy + by1 * k > 0 && oy + by0 * k < H;
+    if (!onScreen && !dirty) return;                          // nothing drawn last time either: skip even the clear
+    ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.clearRect(0, 0, cv.width, cv.height); dirty = false;
     if (!onScreen) return;
+    dirty = true; lastT = performance.now();
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     ctx.save(); clipToPainting(ctx, k, ox, oy);
     const m = k * PXM;                                        // css px per metre
@@ -51,27 +53,37 @@ export async function initCableCar({ viewer, item, origin, base = 'life/' }) {
     ctx.strokeStyle = 'rgba(255, 255, 255, 0.35)'; ctx.lineWidth = (lw + 1.6) / k; for (const p of cables) ctx.stroke(p);
     ctx.strokeStyle = 'rgba(28, 28, 34, 0.85)'; ctx.lineWidth = lw / k; for (const p of cables) ctx.stroke(p);
     ctx.restore();
-    // cabins: every spacing_m on both cables, moving at speed_ms (up on one, down on the other)
+    // cabins: every spacing_m on both cables, moving at speed_ms (up on one, down on the other). All cabins go into one
+    // path (bodies), one path (hangers) and one path (windows): three draw calls instead of ~400 per frame.
     const cw = Math.max(2.2, CABIN_W * m), ch = Math.max(2, CABIN_H * m), hang = HANGER * UP * k, t = reduced.matches ? 0 : Date.now() / 1000;
-    const n = Math.floor(L / d.spacing_m), off = (t * d.speed_ms) % d.spacing_m;
-    ctx.fillStyle = 'rgb(214, 40, 40)'; ctx.strokeStyle = 'rgba(30, 30, 34, 0.75)'; ctx.lineWidth = Math.max(0.6, 0.25 * m);
+    const n = Math.floor(L / d.spacing_m), off = (t * d.speed_ms) % d.spacing_m, r = Math.min(cw, ch) * 0.25;
+    const bodies = new Path2D(), hangers = new Path2D(), wins = cw > 6 ? new Path2D() : null;
     for (const [c, dir] of [[d.up, 1], [d.down, -1]]) {
       for (let i = 0; i <= n + 1; i++) {
         const q = i * d.spacing_m + off, s = dir > 0 ? q : L - q - d.spacing_m / 2;   // metres from the lower station
         if (s < 8 || s > L - 8) continue;                                       // inside a station
         const [u, v] = at(c, s), x = ox + u * k, y = oy + v * k;
         if (x < -20 || y < -20 || x > W + 20 || y > H + 40) continue;
-        if (hang > 1.5) { ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x, y + hang); ctx.stroke(); }
+        if (hang > 1.5) { hangers.moveTo(x, y); hangers.lineTo(x, y + hang); }
         const cy = y + Math.max(hang, 1);
-        ctx.beginPath(); ctx.roundRect(x - cw / 2, cy, cw, ch, Math.min(cw, ch) * 0.25); ctx.fill();
-        if (cw > 6) { ctx.fillStyle = 'rgba(200, 225, 240, 0.85)'; ctx.fillRect(x - cw * 0.32, cy + ch * 0.2, cw * 0.64, ch * 0.32); ctx.fillStyle = 'rgb(214, 40, 40)'; }
+        if (cw > 4) bodies.roundRect(x - cw / 2, cy, cw, ch, r); else bodies.rect(x - cw / 2, cy, cw, ch);
+        if (wins) wins.rect(x - cw * 0.32, cy + ch * 0.2, cw * 0.64, ch * 0.32);
       }
     }
+    ctx.strokeStyle = 'rgba(30, 30, 34, 0.75)'; ctx.lineWidth = Math.max(0.6, 0.25 * m); ctx.stroke(hangers);
+    ctx.fillStyle = 'rgb(214, 40, 40)'; ctx.fill(bodies);
+    if (wins) { ctx.fillStyle = 'rgba(200, 225, 240, 0.85)'; ctx.fill(wins); }
     ctx.restore();
   }
-  function loop() { raf = 0; if (document.hidden) return; draw(); if (onScreen && !reduced.matches) raf = requestAnimationFrame(loop); }
+  // 30 fps is plenty for gondolas; while the map animates, OSD's own tick redraws (the loop doesn't draw twice)
+  let animating = false;
+  function loop() { raf = 0; if (document.hidden) return;
+    if (!animating && performance.now() - lastT > 32) draw();
+    if (onScreen && !reduced.matches) raf = requestAnimationFrame(loop); }
   const kick = () => { if (!raf) raf = requestAnimationFrame(loop); };
+  viewer.addHandler('animation-start', () => { animating = true; });
   viewer.addHandler('animation', () => { draw(); if (onScreen) kick(); });
+  viewer.addHandler('animation-finish', () => { animating = false; });
   viewer.addHandler('animation-finish', kick);
   viewer.addHandler('open', () => { resize(); kick(); });
   viewer.addHandler('resize', () => { resize(); draw(); });

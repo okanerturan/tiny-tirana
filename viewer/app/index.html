@@ -4,12 +4,12 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="color-scheme" content="light dark">
-<meta name="description" content="Explore Tirana as an isometric pixel-art map: 30 landmarks with their stories, live planes over Rinas, buses on the real timetable and the Dajti cable car. Painted by an AI model, made with Claude.">
+<meta name="description" content="Explore Tirana as an isometric pixel-art map: 46 landmarks with their stories, live planes over Rinas, buses on the real timetable and the Dajti cable car. Painted by an AI model, made with Claude.">
 <link rel="canonical" href="https://tirana.fyi/app/">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Tiny Tirana">
 <meta property="og:title" content="Tiny Tirana: an isometric pixel-art map of Tirana">
-<meta property="og:description" content="Explore Tirana as an isometric pixel-art map: 30 landmarks with their stories, live planes over Rinas, buses on the real timetable and the Dajti cable car. Painted by an AI model, made with Claude.">
+<meta property="og:description" content="Explore Tirana as an isometric pixel-art map: 46 landmarks with their stories, live planes over Rinas, buses on the real timetable and the Dajti cable car. Painted by an AI model, made with Claude.">
 <meta property="og:url" content="https://tirana.fyi/app/">
 <meta property="og:image" content="https://tirana.fyi/app/og/tirana.jpg">
 <meta property="og:image:width" content="1200">
@@ -19,10 +19,10 @@
 <meta property="og:locale:alternate" content="sq_AL">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="Tiny Tirana: an isometric pixel-art map of Tirana">
-<meta name="twitter:description" content="Explore Tirana as an isometric pixel-art map: 30 landmarks with their stories, live planes over Rinas, buses on the real timetable and the Dajti cable car. Painted by an AI model, made with Claude.">
+<meta name="twitter:description" content="Explore Tirana as an isometric pixel-art map: 46 landmarks with their stories, live planes over Rinas, buses on the real timetable and the Dajti cable car. Painted by an AI model, made with Claude.">
 <meta name="twitter:image" content="https://tirana.fyi/app/og/tirana.jpg">
 <meta name="twitter:image:alt" content="The city of Tirana painted as an isometric pixel-art island in the clouds">
-<script type="application/ld+json">{"@context": "https://schema.org", "@type": "WebSite", "name": "Tiny Tirana", "url": "https://tirana.fyi/", "description": "Explore Tirana as an isometric pixel-art map: 30 landmarks with their stories, live planes over Rinas, buses on the real timetable and the Dajti cable car. Painted by an AI model, made with Claude.", "image": "https://tirana.fyi/app/og/tirana.jpg", "inLanguage": ["sq", "en"], "creator": {"@type": "Person", "name": "@okanerturan", "url": "https://github.com/okanerturan"}}</script>
+<script type="application/ld+json">{"@context": "https://schema.org", "@type": "WebSite", "name": "Tiny Tirana", "url": "https://tirana.fyi/", "description": "Explore Tirana as an isometric pixel-art map: 46 landmarks with their stories, live planes over Rinas, buses on the real timetable and the Dajti cable car. Painted by an AI model, made with Claude.", "image": "https://tirana.fyi/app/og/tirana.jpg", "inLanguage": ["sq", "en"], "creator": {"@type": "Person", "name": "@okanerturan", "url": "https://github.com/okanerturan"}}</script>
 <title>Tiny Tirana: an isometric pixel-art map of Tirana</title>
 <link rel="icon" type="image/svg+xml" href="brand/favicon.svg">
 <link rel="icon" type="image/png" sizes="32x32" href="brand/favicon-32.png">
@@ -30,6 +30,7 @@
 <link rel="apple-touch-icon" href="brand/icon-180.png">
 <link rel="manifest" href="manifest.webmanifest">
 <meta name="theme-color" content="#e8a33d">
+<link rel="preconnect" href="https://tiles.tirana.fyi">
 <link rel="modulepreload" href="app.js">
 <link rel="preload" href="vendor/openseadragon-4.1.0.min.js" as="script">
 <link rel="modulepreload" href="proj.js">
@@ -543,6 +544,66 @@ body.hide-lm .lm-strip-wrap { display: none; }
 @media (hover: hover) and (pointer: fine) { .buses-chip button.lines:hover { background: color-mix(in oklch, var(--accent), black 8%); } }
 .goto-buses { font-weight: 650; }
 @media (width >= 40rem) { .corner .attr { max-inline-size: 15rem; } }   /* wraps instead of running under the landmark strip */
+
+/* Phones and tablets: no frosted glass. backdrop-filter re-blurs the moving map under every panel on every frame, which
+   is the most expensive thing a phone GPU does here; slightly more opaque panels look the same at arm's length. */
+@media (pointer: coarse) {
+  :root { --panel: light-dark(oklch(0.99 0 none / 0.96), oklch(0.22 0.01 250 / 0.95)); }
+  *, *::before, *::after { -webkit-backdrop-filter: none !important; backdrop-filter: none !important; }
+  .credit { background: oklch(0.15 0.01 250 / 0.78); }
+}
+
+/* search results sit above the landmark strip, and the strip steps aside while typing */
+.results { z-index: 7; }
+body:has(#q:focus) .lm-strip-wrap, body:has(.results:not([hidden])) .lm-strip-wrap { visibility: hidden; }
+/* short screens (phones in landscape): the 8 tool buttons in two columns, so they never reach the top bar */
+@media (height < 32rem) { .side { grid-template-columns: repeat(2, auto); grid-auto-flow: row; } }
+
+/* live counter (presence.js): a chip like the planes chip, green dot that breathes */
+.presence { display: inline-flex; align-items: center; gap: 0.45rem; min-block-size: 2.1rem; padding: 0 0.8rem; border: 0; border-radius: 999px;
+  background: var(--panel); color: inherit; font: inherit; font-size: 0.82rem; box-shadow: var(--shadow); cursor: pointer; }
+.presence b { font-variant-numeric: tabular-nums; }
+.presence-dot { inline-size: 0.5rem; block-size: 0.5rem; border-radius: 50%; background: oklch(0.72 0.19 145); box-shadow: 0 0 0 0 oklch(0.72 0.19 145 / 0.5); }
+.presence[aria-pressed="true"] .presence-dot { background: var(--accent); }
+.presence:active { scale: 0.96; }
+@media (prefers-reduced-motion: no-preference) {
+  .presence-dot { animation: presence-pulse 2.4s ease-out infinite; }
+  @keyframes presence-pulse { 0% { box-shadow: 0 0 0 0 oklch(0.72 0.19 145 / 0.55); } 70%, 100% { box-shadow: 0 0 0 0.45rem oklch(0.72 0.19 145 / 0); } }
+}
+@media (hover: hover) and (pointer: fine) { .presence:hover { background: color-mix(in oklch, var(--panel), var(--fg) 7%); } }
+
+/* play modes (game.js): canvas over the map, HUD in the corners, pedals on touch screens, the small mode menu */
+.game-layer { position: absolute; inset: 0; inline-size: 100%; block-size: 100%; pointer-events: none; }
+.game-menu { position: absolute; z-index: 8; inset-inline-end: calc(var(--gap) + 3.4rem + env(safe-area-inset-right, 0px)); inset-block-end: calc(var(--gap) + 9rem);
+  display: grid; gap: 0.25rem; padding: 0.35rem; border-radius: 16px; }
+.game-menu button { min-block-size: 2.75rem; padding-inline: 0.9rem; border: 0; border-radius: 12px; background: transparent; color: inherit; font: inherit; font-weight: 600; text-align: start; cursor: pointer; }
+.game-menu button:active { scale: 0.97; }
+@media (hover: hover) and (pointer: fine) { .game-menu button:hover { background: color-mix(in oklch, var(--fg) 9%, transparent); } }
+body.playing .lm-strip-wrap, body.playing .corner, body.playing .bar .search, body.playing .lm, body.playing #card { display: none !important; }
+.game-hud { position: absolute; inset: 0; z-index: 6; pointer-events: none; font-variant-numeric: tabular-nums; }
+.game-hud .g-top { position: absolute; inset-block-start: calc(4.6rem + env(safe-area-inset-top, 0px)); inset-inline-start: 50%; translate: -50% 0; display: flex; align-items: center; gap: 0.9rem;
+  padding: 0.45rem 0.55rem 0.45rem 1rem; border-radius: 999px; background: var(--panel-solid); box-shadow: var(--shadow); white-space: nowrap; pointer-events: auto; font-size: 0.9rem; }
+.game-hud .g-best { color: var(--muted); }
+.g-exit { inline-size: 2rem; block-size: 2rem; border: 0; border-radius: 50%; background: color-mix(in oklch, var(--fg) 10%, transparent); color: inherit; cursor: pointer; }
+.game-hud .g-speed { position: absolute; inset-block-end: calc(var(--gap) + env(safe-area-inset-bottom, 0px)); inset-inline-start: calc(var(--gap) + env(safe-area-inset-left, 0px));
+  padding: 0.5rem 0.9rem 0.6rem; border-radius: 16px; background: var(--panel-solid); box-shadow: var(--shadow); min-inline-size: 7.5rem; text-align: center; }
+.game-hud .g-speed b { font-size: 1.6rem; }
+.game-hud .g-speed i { display: block; block-size: 6px; margin-block-start: 0.35rem; border-radius: 3px;
+  background: linear-gradient(90deg, var(--accent) var(--b), color-mix(in oklch, var(--fg) 18%, transparent) var(--b)); }
+.game-hud .g-count { position: absolute; inset: 0; display: grid; place-items: center; font-size: clamp(4rem, 18vw, 9rem); font-weight: 800; color: white; text-shadow: 0 4px 24px oklch(0 0 none / 0.5); }
+.game-hud .g-call { position: absolute; inset-block-start: 20%; inset-inline: 0; text-align: center; font-size: clamp(1.4rem, 5vw, 2.2rem); font-weight: 800; color: white; text-shadow: 0 3px 14px oklch(0 0 none / 0.55); }
+.game-hud .g-over { font-size: clamp(1.1rem, 4vw, 1.6rem); inset-block-start: auto; inset-block-end: 22%; }
+.g-result { position: absolute; inset-block-start: 50%; inset-inline-start: 50%; translate: -50% -50%; inline-size: min(22rem, calc(100% - 2rem)); padding: 1.1rem 1.2rem; border-radius: 20px; pointer-events: auto; }
+.g-result h2 { margin: 0 0 0.6rem; } .g-result ol { margin: 0 0 0.6rem; padding-inline-start: 1.3rem; display: grid; gap: 0.3rem; }
+.g-result li span { float: inline-end; color: var(--muted); } .g-result li.me { font-weight: 700; color: var(--accent); }
+.g-actions { display: flex; gap: 0.5rem; justify-content: flex-end; }
+.game-pad { position: absolute; z-index: 6; inset-inline: calc(var(--gap) + 8.5rem) var(--gap); inset-block-end: calc(var(--gap) + env(safe-area-inset-bottom, 0px));
+  display: flex; gap: 0.6rem; justify-content: flex-end; touch-action: none; -webkit-user-select: none; user-select: none; }
+.game-pad button { min-inline-size: 4.2rem; min-block-size: 4.2rem; padding-inline: 1rem; border: 0; border-radius: 22px; background: var(--panel-solid); color: inherit;
+  font: inherit; font-size: 1.05rem; font-weight: 700; box-shadow: var(--shadow); touch-action: none; }
+.game-pad .gas { background: var(--accent); color: var(--accent-ink); }
+.game-pad button:active { scale: 0.94; }
+@media (pointer: fine) { .game-pad { display: none; } }
 </style>
 </head>
 <body>
@@ -577,6 +638,7 @@ body.hide-lm .lm-strip-wrap { display: none; }
     <button class="btn" id="busesBtn" hidden aria-pressed="false" aria-label="Autobusët (sipas orarit)" data-i18n-aria="buses"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" aria-hidden="true"><rect x="4" y="3" width="16" height="15" rx="3"/><path d="M4 11h16M4 7h16"/><circle cx="8" cy="14.5" r=".6" fill="currentColor"/><circle cx="16" cy="14.5" r=".6" fill="currentColor"/><path d="M7 18v2.5M17 18v2.5"/></svg></button>
     <button class="btn" id="tsBtn" hidden aria-pressed="true" aria-label="Efekti miniaturë"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 5.5h16M4 18.5h16" stroke-dasharray="1.5 3"/><path d="M4 12h16"/><circle cx="12" cy="12" r="2.6" fill="currentColor" stroke="none"/></svg></button>
     <button class="btn" id="cwBtn" hidden aria-label="Rrotullo" data-i18n-aria="rotate">⟳</button>
+    <button class="btn" id="playBtn" aria-pressed="false" aria-expanded="false" aria-label="Luaj" data-i18n-aria="play"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 8h10a4 4 0 0 1 4 4v2a3 3 0 0 1-5.4 1.8L14 14h-4l-1.6 1.8A3 3 0 0 1 3 14v-2a4 4 0 0 1 4-4Z"/><path d="M8 11v3M6.5 12.5h3"/><circle cx="15.5" cy="11.5" r=".6" fill="currentColor"/><circle cx="17.5" cy="13" r=".6" fill="currentColor"/></svg></button>
     <button class="btn" id="inBtn" aria-label="Zmadho" data-i18n-aria="zoomIn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button>
     <button class="btn" id="outBtn" aria-label="Zvogëlo" data-i18n-aria="zoomOut"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M5 12h14"/></svg></button>
     <button class="btn" id="homeBtn" aria-label="E gjithë harta" data-i18n-aria="home"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>
