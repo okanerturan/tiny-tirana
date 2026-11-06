@@ -140,13 +140,7 @@ footer { padding-block-start: 1rem; border-block-start: 1px solid var(--line); f
 <h1>How Tiny Tirana was made</h1>
 <p class="meta">A personal, non-commercial project · November 2026 · about a 25-minute read</p>
 
-<div class="tldr"><strong>Short version.</strong>
-<ul>
-  <li>One fixed orthographic camera renders Google's 3D model of Tirana into 80 pixel-aligned shots: 20,480 × 16,384 px at 14.6 cm per pixel, from <em>one</em> Google request.</li>
-  <li>A big image model (GPT Image 2.5 "Sunburst", given a FLUX.2 style hint) redraws 125 frames as pixel art. Automatic checks keep 121 of them.</li>
-  <li>A small add-on (a LoRA) teaches the open Qwen-Image 2.1 model that style in 2,000 steps on one Colab GPU.</li>
-  <li>The fine-tuned model then paints the whole map as <em>one</em> picture, window by overlapping window, so there are no seams. That takes 48 minutes and about $0.80.</li>
-  <li>Total so far: about $12 of image API, about $5 of GPU, $0 of Google tiles. Most of the work was in getting the details right.</li>
+<div class="tldr"><strong>Short version. One fixed orthographic camera renders Google's 3D model of Tirana into pixel-aligned shots at 14.6 cm per pixel. A big image model (GPT Image 2.5 "Sunburst", given a FLUX.2 style hint) redraws 125 frames as pixel art; automatic checks keep 121 of them. A small add-on (a LoRA) teaches the open Qwen-Image 2.1 model that style in 2,000 steps on one Colab GPU. The first area was painted as one picture, window by overlapping window, with no seams (48 minutes, about $0.80). The rest of the city, the corridor to the airport, Rinas, Mount Dajti and Farka Lake were painted in big overlapping blocks, and the seams between blocks were healed afterwards. Total so far: roughly $40 of image API (training data and the landmark art), roughly $20 of GPU, $0 of Google tiles. Most of the work was in getting the details right.</li>
 </ul></div>
 
 <h2 id="contents">Contents</h2>
@@ -248,7 +242,7 @@ footer { padding-block-start: 1rem; border-block-start: 1px solid var(--line); f
 </figure>
 
 <h2 id="sampler">7. Painting without seams</h2>
-<p>The painter only ever sees <strong>one 1,024 × 1,024 px window at a time</strong>. The map is 20,480 × 16,384 px. So how does a model that paints small squares produce one big picture with no visible joins?</p>
+<p>The painter only ever sees <strong>one 1,024 × 1,024 px window at a time</strong>. The first map area alone was 20,480 × 16,384 px; the whole canvas is now 108,544 × 100,352. So how does a model that paints small squares produce one big picture with no visible joins?</p>
 <p><strong>The obvious way doesn't work.</strong> Cut the city into 1,024 px tiles, paint each one, and stitch them together, and you get seams: each tile is painted <q>by a slightly different artist</q>, so a tree or a roof changes colour exactly where two tiles meet. The first version of this map was painted roughly that way.</p>
 <p><strong>What works is painting all the tiles at the same time.</strong> An image model doesn't paint in one stroke. It starts from random noise and cleans it up in a few steps (8 for this model). The trick, called joint sampling or MultiDiffusion and used by tiny.london, is to run those steps on the whole city at once:</p>
 <ol>
@@ -278,9 +272,9 @@ footer { padding-block-start: 1rem; border-block-start: 1px solid var(--line); f
 <p>Tirana Lake is shallow along its western shore, and in Google's 3D model you can see weeds and silt under the surface. The painter took those dark, blotchy shapes for land and drew a small forest in the lake. The fix comes before painting: OpenStreetMap's outline of each lake is projected onto the render at that lake's own water level. The level comes from free elevation data, calibrated so Tirana Lake matches. Inside the outline the render is calmed into almost flat water. Then only the water and a thin band of shore are repainted, with the rest of the painting held fixed. The same clean-up runs on every lake and pond of the wider city before it is painted, and it leaves OpenStreetMap's piers and jetties alone: the first lake fix painted the two piers on Tirana Lake into water, and they had to be put back.</p>
 <p>A few places are blurred on purpose in Google's 3D model: sharp-edged polygons with a smear inside, the way some sensitive sites are hidden. The painter copied the smear faithfully. Those spots were found by looking for areas with almost no fine detail, apart from water. They were then filled with neutral painted ground: forest on the hillside, and grass and trees with a pale kerb in the city. The texture is borrowed from nearby parts of the painting, and nothing was invented about what is really there.</p>
 <h2 id="viewer">8. The viewer</h2>
-<p>The map page is plain HTML, CSS and one small JavaScript module, with no framework and no build step. <a href="https://openseadragon.github.io">OpenSeadragon</a> shows a deep-zoom pyramid of 512 px tiles, self-hosted from the same origin. Pixels switch to nearest-neighbour above 100 % zoom, so the pixel art stays crisp.</p>
+<p>The map page is plain HTML, CSS and a dozen small JavaScript modules, with no framework and no build step. <a href="https://openseadragon.github.io">OpenSeadragon</a> shows a deep-zoom pyramid of 512 px tiles, served from Cloudflare R2. Pixels switch to nearest-neighbour above 100 % zoom, so the pixel art stays crisp.</p>
 <ul>
-  <li><strong>Tiles are AVIF</strong>, with WebP for browsers that can't show AVIF. The most-zoomed level keeps texture (AVIF q75, which matched WebP q90 at 35.7 vs 36.0 dB). Zoomed-out levels are compressed harder. The whole map is 84 MB as AVIF, against 134 MB as WebP q90.</li>
+  <li><strong>Tiles are AVIF</strong>, with WebP for browsers that can't show AVIF. The most-zoomed level keeps texture (AVIF q75, which matched WebP q90 at 35.7 vs 36.0 dB). Zoomed-out levels are compressed harder. The first map area was 84 MB as AVIF, against 134 MB as WebP q90.</li>
 </ul>
 <figure>
   <picture><source srcset="how/tiles_codec.avif" type="image/avif"><img src="how/tiles_codec.webp" alt="One tile at 4x zoom: original, WebP q90, WebP q82, AVIF q60, AVIF q50" width="1400" height="301" loading="lazy" decoding="async"></picture>
@@ -290,7 +284,7 @@ footer { padding-block-start: 1rem; border-block-start: 1px solid var(--line); f
   <li><strong>Search runs in your browser</strong> over 1,337 OpenStreetMap places, streets and landmarks. It is loaded only when you first click the search box (26 KB). It ignores diacritics and knows a few English words, so <em>skanderbeg</em>, <em>pyramid</em> and <em>nene tereza</em> all work.</li>
   <li><strong>The address bar holds the view</strong> (<code>#lat,lon,zoom</code>), so any link opens the same spot. The projection maths runs in the page too, accurate to a few centimetres in the centre.</li>
   <li>Albanian and English, light and dark, phone layout, keyboard shortcuts (<kbd>/</kbd> to search).</li>
-  <li>No server code. Tiles are static files in immutable, versioned folders, cached for a year.</li>
+  <li>A small Cloudflare Worker serves the page and three tiny APIs: the live planes, the anonymous statistics and the "here now" counter. Tiles carry a revision number, so a re-upload never shows stale tiles.</li>
 </ul>
 
 <h3>Live planes</h3>
@@ -311,13 +305,15 @@ footer { padding-block-start: 1rem; border-block-start: 1px solid var(--line); f
 </ul>
 <p>Buses, planes and cars are pre-drawn as small 3D toys from the map's exact camera at 32 headings, so they share the painting's angle. They all use one size rule (true metres, one shared minimum), so a bus is always about 2.7 cars long.</p>
 
-<h2 id="rotation">10. Turning the city around</h2>
-<p>None of the other AI-painted maps can rotate, because a painting has only one side. We render and paint the map from four directions (NW, NE, SE, SW). The renderer also records the height of every pixel from Google's mesh, so each painting can be lifted into 3D. When you press rotate, the browser (WebGL) draws the two nearest paintings from the turning camera and blends them per pixel by depth and angle. Where one painting couldn't see a wall, the other fills it in. At each of the four directions you see the painting exactly. In between, it is a 0.9-second orbit around the spot at the centre of the screen.</p>
+<h2 id="rotation">10. Turning the city around (an experiment, not on the site yet)</h2>
+<p><strong>This is not live yet.</strong> The map you see is painted from one direction only, and the rotate button is switched off. What follows is the experiment so far.</p>
+<p>None of the other AI-painted maps can rotate, because a painting has only one side. The idea: render and paint the map from four directions (NW, NE, SE, SW), and keep the height of every pixel from Google's mesh, so each painting can be lifted into 3D. Turning would then draw the two nearest paintings from the moving camera in WebGL and blend them per pixel by depth and angle, one filling the walls the other couldn't see.</p>
+<p>We built this for a small test area and it works there: a 0.9-second orbit around the centre of the screen, exact at each of the four directions.</p>
 <figure class="breakout">
   <picture><source srcset="how/orbit.avif" type="image/avif"><img src="how/orbit.webp" alt="The Pyramid mid-rotation: top row with four painted directions shows smears; bottom row with eight is clean" width="1200" height="800" loading="lazy" decoding="async"></picture>
   <figcaption>The Pyramid halfway through a turn. Top: blending four painted directions. Bottom: eight. Eight is cleaner, but the in-between frames are only on screen for a fraction of a second, so the full map uses four.</figcaption>
 </figure>
-<p>Before that we tried a flat 2D "turntable" warp, which rotated, sheared and zoomed the picture all at once. It made at least one person feel queasy, and the honest verdict was <q>so bad I puked in my mouth a bit</q>. Real depth fixed it.</p>
+<p>Before that we tried a flat 2D "turntable" warp, which rotated, sheared and zoomed the picture all at once. It made at least one person feel queasy, and the honest verdict was <q>so bad I puked in my mouth a bit</q>. Real depth fixed it. Painting the whole city three more times is the missing step.</p>
 
 <h2 id="colab">11. The GPU: Google Colab from the terminal</h2>
 <p>Everything heavy (training the painter, every checkpoint test and every full painting) ran on <strong>Google Colab</strong>, driven entirely from the command line with the <a href="https://pypi.org/project/google-colab-cli/">Colab CLI</a>. No notebook was ever opened in a browser.</p>
@@ -331,7 +327,7 @@ footer { padding-block-start: 1rem; border-block-start: 1px solid var(--line); f
     <tr><td>One 1,024 px painting</td><td class="n">≈ 5 s</td></tr>
     <tr><td>Training (2,000 steps)</td><td class="n">≈ 2 h · ≈ 20 units</td></tr>
     <tr><td>Central map (335 MP)</td><td class="n">≈ 48 min · ≈ 8 units</td></tr>
-    <tr><td>Everything so far</td><td class="n">≈ 60 units (≈ $6)</td></tr>
+    <tr><td>Early work (training, tests, first painting)</td><td class="n">≈ 60 units (≈ $6)</td></tr>
   </tbody>
 </table>
 </div>
@@ -360,8 +356,10 @@ colab stop -s tirana                           # stop paying</code></pre>
     <tr><td>Google 3D tiles</td><td class="n">$0</td><td>about 25 root requests in total, well inside the free tier (about 1,000 a month)</td></tr>
     <tr><td>Teacher bake-off (fal.ai)</td><td class="n">≈ $3</td><td>about 40 images, 9 models</td></tr>
     <tr><td>Training data (fal.ai)</td><td class="n">≈ $8.40</td><td>140 Sunburst calls, 121 accepted pairs</td></tr>
-    <tr><td>Colab G4, so far</td><td class="n">≈ $6</td><td>about 60 compute units: training, every checkpoint test, the full paintings</td></tr>
+    <tr><td>Colab G4, early work</td><td class="n">≈ $6</td><td>about 60 compute units: training, every checkpoint test, the full paintings</td></tr>
     <tr><td>One full painting of this area</td><td class="n">≈ $0.80</td><td>8 compute units, 48 minutes</td></tr>
+    <tr><td>Landmark art (fal.ai)</td><td class="n">≈ $25</td><td>dioramas, posters and icons for 46 landmarks</td></tr>
+    <tr><td>Growing the map</td><td class="n">≈ $15</td><td>about 150 more Colab units: the corridor, Dajti, Farka and the edges, with seam healing</td></tr>
     <tr><td>Hosting</td><td class="n">$0</td><td>static files on Cloudflare's free tier</td></tr>
   </tbody>
 </table>
@@ -385,18 +383,18 @@ colab stop -s tirana                           # stop paying</code></pre>
 <p><strong>Data:</strong> 3D geometry and textures © 2026 Google (Photorealistic 3D Tiles). Place and street names © <a href="https://www.openstreetmap.org/copyright">OpenStreetMap contributors</a> (ODbL).</p>
 <p><strong>Models:</strong> Qwen-Image 2.1 Turbo (Alibaba, Qwen Research Licence, non-commercial). The LoRA started from tiny.london's published LoRA (non-commercial). Teacher drawings by GPT Image 2.5 via fal.ai; the style example was drawn by FLUX.2 Max.</p>
 <p><strong>Tools:</strong> three.js, 3d-tiles-renderer, Puppeteer, ai-toolkit (ostris), OpenSeadragon, Google Colab.</p>
-<p id="privacy"><strong>Privacy:</strong> the map keeps anonymous, cookieless statistics, so we can see which places and features people use. That covers visits (Cloudflare Web Analytics) and a few events: which landmark card was opened, which layer was switched, whether a search found something, how long a card stays open, and every 30 seconds the map centre rounded to about 1 km. It also counts how long the map is visible, how fast the first tiles load and the frame rate, script errors, the window width in 100 px steps, touch or mouse, and the browser language. The server keeps the country only, never the IP address. The "here now" counter counts open tabs by the same random per-tab number, and keeps only a running total of visits. There is no cookie, no persistent ID and no search text. A random number groups one visit's events and disappears when the tab closes. If your browser sends Do Not Track or Global Privacy Control, nothing is sent at all. The live-plane positions come from public ADS-B feeds (adsb.lol, adsb.fi).</p>
+<p id="privacy"><strong>Privacy:</strong> the map keeps anonymous, cookieless statistics, so we can see which places and features people use. That covers visits and a few events: which landmark card was opened, which layer was switched, whether a search found something, how long a card stays open, and every 30 seconds the map centre rounded to about 1 km. It also counts how long the map is visible, how fast the first tiles load and the frame rate, script errors, the window width in 100 px steps, touch or mouse, and the browser language. The server keeps the country only, never the IP address. The "here now" counter counts open tabs by the same random per-tab number, and keeps only a running total of visits. There is no cookie, no persistent ID and no search text. A random number groups one visit's events and disappears when the tab closes. If your browser sends Do Not Track or Global Privacy Control, nothing is sent at all. The live-plane positions come from public ADS-B feeds (adsb.lol, adsb.fi).</p>
 <h2 id="shape">15. The shape of Tirana</h2>
-<p>The painting was made in square blocks, so its raw outline is a staircase of rectangles. The map you see is cut to the shape of the city instead, with clouds around it, the way tiny.london does it.</p>
+<p>The painting was made in square blocks, so its raw outline is a staircase of rectangles. The map you see is cut to an organic coast instead, with clouds around it, the way tiny.london does it.</p>
 <ul>
-  <li><strong>What counts as land:</strong> Tirana's 11 urban units, plus the built-up city next to them (every OpenStreetMap building and built-up area within about 600 m), so the coast runs where houses give way to fields, not through a street just because an administrative line does.</li>
-  <li><strong>Connectors:</strong> smooth "worms" along a few lines join the city to the airport, Mount Dajti, Farka Lake and Tirana East Gate. Each one is as wide as the painting allows and never wider.</li>
-  <li><strong>The coast:</strong> a distance field from the land, pushed out about 50 m and wobbled by layered noise, with wide bays where the land runs along the painting's edge. It is computed at 1/16 scale and smoothed up to full size, with a 3 px soft edge. Small cloud ponds inland and stray islets are removed, so it is one landmass.</li>
+  <li><strong>What counts as land:</strong> everything that was painted. An earlier version cut to Tirana's administrative boundary and threw away painted streets, which looked silly where the city simply carries on.</li>
+  <li><strong>The coast:</strong> a distance field that keeps the edge a little inside the painting, wobbled by layered noise, with wide rounded bays so the block staircase doesn't show. It is computed at 1/16 scale and smoothed up to full size, with a 3 px soft edge. Small cloud ponds inland and stray islets are removed, so it is one landmass.</li>
+  <li><strong>Growing it:</strong> to make the shape broader, more blocks are painted around the edges, especially along the corridor to the airport.</li>
   <li><strong>The clouds</strong> are a small tileable texture behind the map. They move with it, and only show where the painting is transparent.</li>
 </ul>
 
 <h2 id="dajti">16. Dajti and the cable car</h2>
-<p>Mount Dajti rises behind the city, and the Dajti Ekspres gondola climbs it. The mountain was painted in 14 extra blocks on three Colab GPUs at once, one column apart so neighbours never paint at the same time; the middle column went last, pinned to both sides.</p>
+<p>Mount Dajti rises behind the city, and the Dajti Ekspres gondola climbs it. The mountain was painted in 14 extra blocks on two Colab GPUs at once (a third painted Farka Lake meanwhile), working one column apart so neighbours never paint at the same time; the middle column went last, pinned to both sides.</p>
 <p>The cable itself is too thin for the 3D model, so the painting shows the stations but no line. The cable car on the map is drawn live instead: the real line from OpenStreetMap, 16 pylons on the terrain, a little sag between them, and red cabins about every 100 m moving at the real speed (the ride takes about 15 minutes).</p>
 
 <h2 id="who">17. Who made this, and more maps</h2>

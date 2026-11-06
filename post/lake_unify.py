@@ -28,6 +28,18 @@ def main():
     dist = ndimage.distance_transform_edt(water)
     low_l = ndimage.gaussian_filter(lum, 12)
     dark = water & (low_l < DARK_LUM); light = water & ~dark & (dist > 20)
+    if '--clean' in a:                                                       # one clean water surface: no lakebed, no submerged trees, no seams
+        sh = water & (dist > 6) & (dist < 120); dp = water & (dist > 500)
+        c_sh, c_dp = np.median(img[sh], 0), np.median(img[dp], 0)
+        w = np.clip((dist - 20) / 480, 0, 1)[..., None]; w = w * w * (3 - 2 * w)
+        base = c_sh * (1 - w) + c_dp * w
+        grain = img - np.stack([ndimage.gaussian_filter(img[..., c], 1.5) for c in range(3)], -1)
+        rip = np.random.default_rng(3).standard_normal(img.shape[:2])[..., None] * 2.2
+        out = base + grain * 0.35 + rip
+        m = (np.clip((dist - 3) / 14, 0, 1) * water)[..., None]
+        res = np.clip(img * (1 - m) + out * m, 0, 255).astype(np.uint8)
+        print(f'clean: water {water.sum() / 1e6:.1f} Mpx; shore {c_sh.round().tolist()} deep {c_dp.round().tolist()}')
+        return finish(st, u0, v0, u1, v1, img, res, m, bak, dry)
     if dark.sum() < 1000 or light.sum() < 1000: sys.exit(f'nothing to unify (dark {dark.sum()}, light {light.sum()})')
     sh = light & (dist < 150); dp = light & (dist > 700) if (light & (dist > 700)).sum() > 5000 else light & (dist > 350)
     c_sh, c_dp = np.median(img[sh], 0), np.median(img[dp], 0)
@@ -39,6 +51,11 @@ def main():
     m = np.maximum(m, dark * 1.0)[..., None]
     res = np.clip(img * (1 - m) + out * m, 0, 255).astype(np.uint8)
     print(f'water {water.sum() / 1e6:.1f} Mpx, dark {dark.sum() / 1e6:.1f} Mpx repainted; shore {c_sh.round().tolist()} deep {c_dp.round().tolist()}')
+    return finish(st, u0, v0, u1, v1, img, res, m, bak, dry)
+
+
+
+def finish(st, u0, v0, u1, v1, img, res, m, bak, dry):
     if dry:
         H, W = img.shape[:2]; Image.fromarray(np.concatenate([img.astype(np.uint8), res], 1)).resize((W // 4, H // 8)).save(dry); print('preview', dry); return
     if bak: os.makedirs(bak, exist_ok=True)

@@ -235,7 +235,7 @@ body.hide-lm .lm, body.hide-lm .mm-dot { display: none !important; }   /* OSD se
 @media (prefers-reduced-motion: reduce) { .card { transition: none; } }
 
 /* image stage: three stacked images, one visible; tabs float on it */
-.stage { position: relative; margin: 0.55rem 0.55rem 0; inline-size: calc(100% - 1.1rem); aspect-ratio: 4 / 3; max-block-size: 44dvh;   /* definite width: a height cap must not shrink the width too */ border-radius: 20px; overflow: clip; background: var(--bg); }
+.stage { position: relative; margin: 0.55rem 0.55rem 0; inline-size: calc(100% - 1.1rem); aspect-ratio: 108544 / 100352; max-block-size: 44dvh;   /* definite width: a height cap must not shrink the width too */ border-radius: 20px; overflow: clip; background: var(--bg); }
 .stage picture { display: contents; }
 .stage img.view { position: absolute; inset: 0; inline-size: 100%; block-size: 100%; object-fit: cover; opacity: 0; scale: 1.02; }
 .stage img.view[data-v="diorama"] { object-fit: contain; background: oklch(0.959 0.037 83); }   /* = the artwork's own paper colour */   /* whole artwork, never cropped */
@@ -318,7 +318,7 @@ body.hide-lm .lm, body.hide-lm .mm-dot { display: none !important; }   /* OSD se
 /* --- minimap: the whole painting in the corner, with the current view outlined --- */
 .minimap #minimap, .minimap .navigator { background: oklch(0.9 0.02 250) !important; }
 .minimap { position: absolute; z-index: 2; inset-inline-end: calc(var(--gap) + env(safe-area-inset-right, 0px)); inset-block-start: calc(4.5rem + env(safe-area-inset-top, 0px));
-  inline-size: 9.5rem; aspect-ratio: 73728 / 94208; padding: 4px; background: var(--panel-solid); border: 1px solid var(--line); border-radius: 14px; box-shadow: var(--shadow); overflow: clip; }
+  inline-size: 9.5rem; aspect-ratio: 108544 / 100352; padding: 4px; background: var(--panel-solid); border: 1px solid var(--line); border-radius: 14px; box-shadow: var(--shadow); overflow: clip; }
 #minimap { inline-size: 100% !important; block-size: 100% !important; border: 0 !important; background: transparent !important; border-radius: 10px; overflow: clip; cursor: pointer; }
 #minimap .displayregion { border: 2px solid var(--accent) !important; border-radius: 3px; background: color-mix(in oklch, var(--accent) 18%, transparent) !important;
   box-shadow: 0 0 0 1px oklch(1 0 none / 0.6); }
@@ -604,6 +604,14 @@ body.playing .lm-strip-wrap, body.playing .corner, body.playing .bar .search, bo
 .game-pad .gas { background: var(--accent); color: var(--accent-ink); }
 .game-pad button:active { scale: 0.94; }
 @media (pointer: fine) { .game-pad { display: none; } }
+
+/* race/fly v2: traffic and other layers hidden while playing; HUD extras; steering + pedals on touch */
+body.playing .buses-layer, body.playing .life-layer, body.playing .cable-layer, body.playing .planes-layer, body.playing .side > .btn:not(#playBtn), body.playing .minimap { display: none !important; }
+.game-menu button { display: grid; gap: 0.1rem; } .game-menu small { font-weight: 400; color: var(--muted); font-size: 0.78rem; }
+.g-mute { inline-size: 2rem; block-size: 2rem; border: 0; border-radius: 50%; background: color-mix(in oklch, var(--fg) 10%, transparent); cursor: pointer; }
+.game-hud .g-help { position: absolute; inset-block-end: 6.5rem; inset-inline: 1rem; text-align: center; color: white; font-weight: 600; text-shadow: 0 2px 10px oklch(0 0 none / 0.7); }
+.game-pad { inset-inline: var(--gap); justify-content: space-between; align-items: flex-end; }
+.game-pad .g-steer, .game-pad .g-pedals { display: flex; gap: 0.6rem; }
 </style>
 </head>
 <body>
