@@ -1,0 +1,23 @@
+# generated data, model weights and tile pyramids (tens of GB; tiles live in R2)
+/data/
+/dist/
+/vendor/
+/viewer/tiles_*/
+/viewer/eval_v3/
+/viewer/orbit8/
+/viewer/pairs/
+/viewer/scenes/
+/viewer/compare/
+/viewer/rotate/
+/viewer/orbit/
+/viewer/style/
+*.safetensors
+*.tar
+node_modules/
+__pycache__/
+.wrangler/
+.DS_Store
+.dev.vars
+.env
+render/web/bundle.js
+/viewer/_archive/

@@ -1,0 +1,55 @@
+<!doctype html><meta charset="utf-8"><body style="margin:0;background:transparent">
+<script type="importmap">{"imports":{"three":"http://sprites.local/three/three.module.js"}}</script>
+<script type="module">
+import * as THREE from 'three';
+// Chunky toy airliner. World: x = east, y = up, z = south. Nose along -z (north) before yaw.
+const N = 32, CELL = 192, VIEW = 50;                       // headings, px per frame, world units across a frame
+const LIVERIES = [['#e8a33d', '#c0533a'], ['#d8433a', '#2b3a55'], ['#3f8fd2', '#f2c14e']];
+const r = new THREE.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true });
+r.setPixelRatio(1); r.setSize(CELL, CELL); r.setClearColor(0, 0);
+const scene = new THREE.Scene();
+const grad = new THREE.DataTexture(new Uint8Array([90, 90, 90, 255, 175, 175, 175, 255, 255, 255, 255, 255]), 3, 1);
+grad.minFilter = grad.magFilter = THREE.NearestFilter; grad.needsUpdate = true;
+const toon = c => new THREE.MeshToonMaterial({ color: c, gradientMap: grad });
+const ink = new THREE.MeshBasicMaterial({ color: '#3b2e27', side: THREE.BackSide });
+function outlined(geo, mat, s = 0.9) {                     // inverted hull outline, thickness s world units
+  const g = new THREE.Group(), m = new THREE.Mesh(geo, mat); g.add(m);
+  geo.computeBoundingBox(); const b = geo.boundingBox, sz = new THREE.Vector3(); b.getSize(sz);
+  const o = new THREE.Mesh(geo, ink); o.scale.set(1 + 2 * s / Math.max(sz.x, .01), 1 + 2 * s / Math.max(sz.y, .01), 1 + 2 * s / Math.max(sz.z, .01));
+  const c = new THREE.Vector3(); b.getCenter(c); o.position.copy(c).multiplyScalar(-(o.scale.x - 1)); o.position.set(-c.x * (o.scale.x - 1), -c.y * (o.scale.y - 1), -c.z * (o.scale.z - 1));
+  g.add(o); return g;
+}
+function plane(tail, stripe) {
+  const P = new THREE.Group(), white = toon('#fbf8f1'), grey = toon('#dfe3e8'), dark = toon('#46505e');
+  const body = new THREE.CapsuleGeometry(3.1, 26, 6, 16); body.rotateX(Math.PI / 2); P.add(outlined(body, white));
+  const band = new THREE.CylinderGeometry(3.16, 3.16, 20, 16, 1, true, -Math.PI * 0.62, Math.PI * 0.24); band.rotateX(Math.PI / 2);
+  const win = new THREE.Mesh(band, toon('#55606e')); win.scale.set(1, 1, 1); win.position.y = 0.6; P.add(win);
+  const belly = new THREE.CylinderGeometry(3.17, 3.17, 24, 16, 1, true, Math.PI * 0.75, Math.PI * 0.5); belly.rotateX(Math.PI / 2); P.add(new THREE.Mesh(belly, toon(stripe)));
+  const nose = new THREE.SphereGeometry(1.5, 12, 8, 0, Math.PI * 2, 0, Math.PI / 2); nose.rotateX(-Math.PI / 2); const nm = new THREE.Mesh(nose, dark); nm.position.set(0, 0.9, -15.3); nm.scale.set(1.3, 0.5, 0.7); P.add(nm);
+  const shapeOf = (pts, side) => { const q = pts.map(([x, y]) => new THREE.Vector2(side * x, y)); return new THREE.Shape(side > 0 ? q : q.reverse()); };
+  for (const side of [1, -1]) {
+    const w = new THREE.ExtrudeGeometry(shapeOf([[0, 0], [17, 6.5], [17, 9], [0, 7.5]], side), { depth: 0.9, bevelEnabled: false }); w.rotateX(Math.PI / 2);
+    const wm = outlined(w, grey, 0.6); wm.position.set(side * 1.5, -0.8, -3.5); P.add(wm);
+    const eng = new THREE.CylinderGeometry(1.5, 1.3, 5, 12); eng.rotateX(Math.PI / 2); const em = outlined(eng, toon(tail), 0.5); em.position.set(side * 7.5, -2.4, -2.5); P.add(em);
+    const st = new THREE.ExtrudeGeometry(shapeOf([[0, 0], [6.5, 2.6], [6.5, 4], [0, 3.6]], side), { depth: 0.6, bevelEnabled: false });
+    st.rotateX(Math.PI / 2); const sm = outlined(st, grey, 0.5); sm.position.set(side * 1, 1, 10.5); P.add(sm);
+  }
+  const fin = new THREE.ExtrudeGeometry(new THREE.Shape([[0, 0], [8, 0], [9.5, 8.5], [6.5, 8.5]].map(([x, y]) => new THREE.Vector2(x, y))), { depth: 0.8, bevelEnabled: false });
+  fin.rotateY(-Math.PI / 2); const fm = outlined(fin, toon(tail), 0.5); fm.position.set(0.4, 1.8, 6); P.add(fm);
+  return P;
+}
+scene.add(new THREE.HemisphereLight('#ffffff', '#8a7a6a', 1.6));
+const sun = new THREE.DirectionalLight('#fff3df', 2.4); sun.position.set(-30, 60, -10); scene.add(sun);
+// The map camera: looking toward heading 315 (NW), tilted 45 degrees down.
+const cam = new THREE.OrthographicCamera(-VIEW / 2, VIEW / 2, VIEW / 2, -VIEW / 2, 0.1, 500);
+const h = 315 * Math.PI / 180, t = 45 * Math.PI / 180;
+const dir = new THREE.Vector3(Math.sin(h) * Math.cos(t), -Math.sin(t), -Math.cos(h) * Math.cos(t));
+cam.position.copy(dir.clone().multiplyScalar(-200)); cam.up.set(0, 1, 0); cam.lookAt(0, 0, 0);
+const sheet = document.createElement('canvas'); sheet.width = N * CELL; sheet.height = LIVERIES.length * CELL; const sx = sheet.getContext('2d');
+for (const [row, [tail, stripe]] of LIVERIES.entries()) {
+  const P = plane(tail, stripe); scene.add(P);
+  for (let i = 0; i < N; i++) { P.rotation.y = -i * 2 * Math.PI / N; r.render(scene, cam); sx.drawImage(r.domElement, i * CELL, row * CELL); }
+  scene.remove(P);
+}
+window.__sheet = sheet.toDataURL('image/png'); window.__meta = { N, CELL, VIEW, liveries: LIVERIES.length };
+</script>

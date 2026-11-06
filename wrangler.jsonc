@@ -1,0 +1,15 @@
+{
+  "$schema": "/opt/homebrew/lib/node_modules/wrangler/config-schema.json",
+  // Tiny Tirana: one Worker serves the static site (dist/, built by deploy/build_site.sh) and /api/* (live planes,
+  // anonymous events). Tiles are on R2 at tiles.tirana.fyi (deploy/r2_upload.py).
+  "name": "tiny-tirana",
+  "main": "deploy/planes-worker.js",
+  "compatibility_date": "2026-11-01",
+  "assets": { "directory": "dist", "binding": "ASSETS", "run_worker_first": ["/api/*"] },
+  "analytics_engine_datasets": [{ "binding": "EVENTS", "dataset": "tiny_tirana_events" }],
+  "routes": [
+    { "pattern": "tirana.fyi", "custom_domain": true },
+    { "pattern": "www.tirana.fyi", "custom_domain": true }
+  ],
+  "observability": { "enabled": true }
+}

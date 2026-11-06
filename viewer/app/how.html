@@ -1,0 +1,408 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<meta name="description" content="How Tiny Tirana was made: one camera, a teacher model, a fine-tuned painter, a seamless sampler, and everything that went wrong on the way.">
+<title>How Tiny Tirana Was Made</title>
+<link rel="icon" type="image/svg+xml" href="brand/favicon.svg">
+<link rel="icon" type="image/png" sizes="32x32" href="brand/favicon-32.png">
+<link rel="icon" type="image/png" sizes="64x64" href="brand/favicon-64.png">
+<link rel="apple-touch-icon" href="brand/icon-180.png">
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#e8a33d">
+<style>
+/* ---------- reset (good-css: foundations) ---------- */
+*, *::before, *::after { box-sizing: border-box; min-width: 0; }
+:root {
+  interpolate-size: allow-keywords; scrollbar-gutter: stable; text-wrap: pretty; overflow-wrap: break-word; font-synthesis: none;
+  -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; -webkit-text-size-adjust: 100%; -webkit-tap-highlight-color: transparent;
+}
+body { margin: 0; min-height: 100svh; }
+h1, h2, h3 { text-wrap: balance; }
+img, svg { display: block; max-width: 100%; height: auto; }
+a, button { touch-action: manipulation; }
+
+/* ---------- tokens: one set for light and dark, OKLCH ---------- */
+:root {
+  color-scheme: light dark;
+  --bg: light-dark(oklch(0.985 0.004 85), oklch(0.17 0.008 250));
+  --fg: light-dark(oklch(0.24 0.01 250), oklch(0.93 0 none));
+  --muted: light-dark(oklch(0.48 0.01 250), oklch(0.72 0.01 250));
+  --line: color-mix(in oklch, var(--fg) 13%, transparent);
+  --card: light-dark(oklch(0.96 0.006 85), oklch(0.21 0.01 250));
+  --code: light-dark(oklch(0.94 0.006 85), oklch(0.24 0.01 250));
+  --accent: oklch(0.66 0.15 55);
+  --good: oklch(0.6 0.14 145); --bad: oklch(0.6 0.17 28); --warn: oklch(0.65 0.13 75);
+  --radius: 10px;
+  --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
+  /* one fluid type scale (good-css: one fluid scale) — 17px→19px body, ratio 1.2→1.25 */
+  --narrow: 20; --wide: 77.5; --size-narrow: 1.0625; --size-wide: 1.1875; --ratio-narrow: 1.2; --ratio-wide: 1.25;
+  --fluid: clamp(0rem, (100vw - var(--narrow) * 1rem) / (var(--wide) - var(--narrow)), 1rem);
+  --at-narrow: calc(var(--size-narrow) * (1rem - var(--fluid))); --at-wide: calc(var(--size-wide) * var(--fluid));
+  --step--1: calc(var(--step-0) / var(--ratio-narrow));
+  --step-0: calc(var(--at-narrow) + var(--at-wide));
+  --step-1: calc(var(--at-narrow) * var(--ratio-narrow) + var(--at-wide) * var(--ratio-wide));
+  --step-2: calc(var(--at-narrow) * pow(var(--ratio-narrow), 2) + var(--at-wide) * pow(var(--ratio-wide), 2));
+  --step-4: calc(var(--at-narrow) * pow(var(--ratio-narrow), 4) + var(--at-wide) * pow(var(--ratio-wide), 4));
+  --sans: system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+/* anchors clear the top edge; smooth only when motion is welcome (good-css: anchor targets) */
+html { scroll-padding-block-start: 1.5rem; }
+@media (prefers-reduced-motion: no-preference) { html { scroll-behavior: smooth; } }
+body { background: var(--bg); color: var(--fg); font: var(--step-0)/1.62 ui-serif, Charter, "Iowan Old Style", Georgia, serif; }
+h1, h2, h3, nav, figcaption, table, .meta, .tldr, .toc { font-family: var(--sans); }
+
+/* ---------- page container: content grid with breakouts (good-css: layout) ---------- */
+.content-grid {
+  --gutter: 1.25rem; --content: 42rem; --breakout: 68rem;
+  display: grid;
+  grid-template-columns:
+    [full-width-start] minmax(var(--gutter), 1fr)
+    [breakout-start] minmax(0, calc((var(--breakout) - var(--content)) / 2))
+    [content-start] min(100% - var(--gutter) * 2, var(--content)) [content-end]
+    minmax(0, calc((var(--breakout) - var(--content)) / 2)) [breakout-end]
+    minmax(var(--gutter), 1fr) [full-width-end];
+  padding-block: calc(1.5rem + env(safe-area-inset-top, 0px)) calc(4rem + env(safe-area-inset-bottom, 0px));
+}
+.content-grid > * { grid-column: content; }
+.content-grid > .breakout { grid-column: breakout; }
+
+/* ---------- vertical rhythm: the parent spaces its children (good-css: space between siblings) ---------- */
+.content-grid > * { margin-block: 0; }
+.content-grid > * + * { margin-block-start: var(--flow-space, 1em); }
+.content-grid > h2 { --flow-space: 2.4em; }
+.content-grid > h3 { --flow-space: 1.8em; }
+.content-grid > :is(h2, h3) + * { --flow-space: 0.6em; }
+.content-grid > :is(figure, .table-wrap, pre, .tldr) { --flow-space: 1.5em; }
+.content-grid > :is(figure, .table-wrap, pre, .tldr) + * { --flow-space: 1.5em; }
+:is(ul, ol) > li + li { margin-block-start: 0.35em; }
+:is(ul, ol):not(.toc) { padding-inline-start: 1.3em; }
+
+/* ---------- type ---------- */
+h1 { font-size: var(--step-4); line-height: 1.08; letter-spacing: -0.02em; }
+h2 { font-size: var(--step-2); line-height: 1.2; letter-spacing: -0.01em; }
+h3 { font-size: var(--step-1); line-height: 1.25; }
+a { color: inherit; text-decoration-color: var(--accent); text-underline-offset: 0.18em; text-decoration-thickness: 0.08em; }
+@media (hover: hover) and (pointer: fine) { a:hover { text-decoration-thickness: 0.14em; } }
+a:active { opacity: 0.75; }
+:focus-visible { outline: max(2px, 0.08em) solid var(--accent); outline-offset: 0.2em; }
+code, kbd { font: 0.86em/1.4 ui-monospace, "SF Mono", Menlo, monospace; background: var(--code); padding: 0.08em 0.32em; border-radius: 5px; }
+kbd { border: 1px solid var(--line); border-block-end-width: 2px; }
+pre { overflow-x: auto; overscroll-behavior-x: contain; padding: 0.9rem 1rem; background: var(--code); border-radius: var(--radius); font-size: var(--step--1); line-height: 1.5; }
+pre code { background: none; padding: 0; border: 0; }
+q { font-style: italic; }
+
+/* ---------- header bits ---------- */
+nav.top { display: flex; gap: 1rem; align-items: center; font-size: var(--step--1); color: var(--muted); }
+nav.top a:first-child { margin-inline-end: auto; display: inline-flex; gap: 0.4rem; align-items: center; font-weight: 650; color: var(--fg); text-decoration: none; }
+nav.top img { inline-size: 1.7em; block-size: 1.7em; flex: none; }
+.meta { color: var(--muted); font-size: var(--step--1); }
+.tldr { padding: 1rem 1.2rem; background: var(--card); border-radius: 12px; font-size: var(--step--1); line-height: 1.55; }
+.tldr ul { margin: 0.4rem 0 0; padding-inline-start: 1.1rem; }
+
+/* ---------- contents: intrinsic grid, numbers inside each item (no CSS columns, no overlap) ---------- */
+.toc {
+  list-style: none; padding: 0; counter-reset: toc;
+  display: grid; gap: 0.35rem 1.5rem; grid-template-columns: repeat(auto-fill, minmax(min(100%, 17rem), 1fr));
+  font-size: var(--step--1);
+}
+.toc li { counter-increment: toc; display: grid; grid-template-columns: 2.2ch 1fr; gap: 0.4rem; align-items: baseline; }
+.toc li + li { margin-block-start: 0; }
+.toc li::before { content: counter(toc) "."; color: var(--muted); font-variant-numeric: tabular-nums; text-align: end; }
+
+/* ---------- figures ---------- */
+figure { margin-inline: 0; }
+figure img { inline-size: 100%; border-radius: var(--radius); background: var(--card); }
+figcaption { margin-block-start: 0.5rem; font-size: var(--step--1); color: var(--muted); line-height: 1.45; }
+blockquote { margin-inline: 0; padding-inline-start: 1rem; border-inline-start: 3px solid var(--accent); color: var(--muted); font-style: italic; }
+
+/* ---------- tables: the wrapper scrolls sideways on narrow screens; numbers line up ---------- */
+.table-wrap { overflow-x: auto; overscroll-behavior-x: contain; }
+table { inline-size: 100%; border-collapse: collapse; font-size: var(--step--1); }
+th, td { text-align: start; padding: 0.45rem 0.5rem; border-block-end: 1px solid var(--line); vertical-align: top; overflow-wrap: anywhere; }
+th { font-weight: 600; }
+td.n, th.n { text-align: end; white-space: nowrap; font-variant-numeric: tabular-nums; overflow-wrap: normal; }
+.good { color: var(--good); } .bad { color: var(--bad); } .warn { color: var(--warn); }
+
+footer { padding-block-start: 1rem; border-block-start: 1px solid var(--line); font-size: var(--step--1); color: var(--muted); }
+.content-grid > footer { --flow-space: 3rem; }
+</style>
+</head>
+<body>
+<main class="content-grid">
+<nav class="top" aria-label="Site">
+  <a href="./"><img src="brand/logo-64.png" srcset="brand/logo-96.webp 1.5x" alt="" width="32" height="32">Tiny Tirana</a>
+  <a href="./">Open the map →</a>
+</nav>
+
+<h1>How Tiny Tirana was made</h1>
+<p class="meta">A personal, non-commercial project · November 2026 · about a 25-minute read</p>
+
+<div class="tldr"><strong>Short version.</strong>
+<ul>
+  <li>One fixed orthographic camera renders Google's 3D model of Tirana into 80 pixel-aligned shots: 20,480 × 16,384 px at 14.6 cm per pixel, from <em>one</em> Google request.</li>
+  <li>A big image model (GPT Image 2.5 "Sunburst", given a FLUX.2 style hint) redraws 125 frames as pixel art. Automatic checks keep 121 of them.</li>
+  <li>A small add-on (a LoRA) teaches the open Qwen-Image 2.1 model that style in 2,000 steps on one Colab GPU.</li>
+  <li>The fine-tuned model then paints the whole map as <em>one</em> picture, window by overlapping window, so there are no seams. That takes 48 minutes and about $0.80.</li>
+  <li>Total so far: about $12 of image API, about $5 of GPU, $0 of Google tiles. Most of the work was in getting the details right.</li>
+</ul></div>
+
+<h2 id="contents">Contents</h2>
+<ol class="toc">
+  <li><a href="#why">Why, and who came before</a></li>
+  <li><a href="#camera">One camera for the whole city</a></li>
+  <li><a href="#first-try">The first try (and what was wrong with it)</a></li>
+  <li><a href="#teacher">Choosing a teacher: 9 models, 3 hard spots</a></li>
+  <li><a href="#data">Making training data that can be trusted</a></li>
+  <li><a href="#training">Training the painter</a></li>
+  <li><a href="#sampler">Painting without seams (and in blocks)</a></li>
+  <li><a href="#viewer">The viewer</a></li>
+  <li><a href="#living">A living map</a></li>
+  <li><a href="#rotation">Turning the city around</a></li>
+  <li><a href="#colab">The GPU: Google Colab</a></li>
+  <li><a href="#costs">What it cost</a></li>
+  <li><a href="#lessons">What we learned</a></li>
+  <li><a href="#credits">Credits</a></li>
+  <li><a href="#shape">The shape of Tirana</a></li>
+  <li><a href="#dajti">Dajti and the cable car</a></li>
+  <li><a href="#who">Who made this, and more maps</a></li>
+</ol>
+
+<h2 id="why">1. Why, and who came before</h2>
+<p>In January 2026 Andy Coenen published <a href="https://cannoneyed.com/projects/isometric-nyc">isometric.nyc</a>, New York in the style of SimCity 2000, painted tile by tile by a fine-tuned image model. In October Boris Starkov did the same for all of London with <a href="https://tiny.london">tiny.london</a>, and wrote up <a href="https://tiny.london/how/">the method</a> in detail. Within two weeks there were dozens of copies, collected on <a href="https://tiny.london/world/">tiny.london/world</a>: Istanbul, Berlin, Seoul, Warsaw, Toronto (three times), Prague (three times), Belgrade, and more.</p>
+<p>Before starting we read every write-up we could find: 38 projects in the tiny.london directory and 28 more found on X, Hacker News and GitHub. The two that shaped this project most were tiny.london (joint sampling, teacher-and-student training, automatic checks) and <a href="https://iso.sloptoronto.ca/how">Isometric Toronto</a> (a complete recipe with costs, and the advice <q>get the camera right first</q>). Nothing like this existed for Tirana. The only thing out there was a single AI image posted to r/albania in 2025, which commenters rightly called out for getting the city wrong. So this map tries hard to be faithful.</p>
+
+<h2 id="camera">2. One camera for the whole city</h2>
+<p>The input is Google's Photorealistic 3D Tiles, the same mesh you see in Google Earth. We checked the alternatives. Albania's geospatial agency, ASIG, has laser height data, 8 cm aerial photos from 2015 and a 3D building layer, but none of it is published as a usable textured 3D model. OpenStreetMap has heights for only about 1 in 4 buildings in the centre. Google is the only source with textured building facades.</p>
+<p>The camera is orthographic: no perspective, so a building has the same size anywhere on the map. It is tilted 45° down, looking north-west (heading 315°). One pixel is 0.146 m, so a 1,024 px frame covers 150 m. That is twice the detail of tiny.london (0.293 m/px). We tested whether more was possible: asking Google for finer detail returned <em>identical</em> pixels (100.0 %), so we already get the finest data that exists. Rendering at 2× zoom only revealed the mesh's triangles, not real detail.</p>
+<p>The important trick, from tiny.london: <strong>the camera never moves.</strong> Each shot shifts the camera's view window by a whole number of pixels. Every shot comes from the same single camera, so shots line up to the pixel. To check this, we rendered the same area as one 2,048 px shot and as four 1,024 px shots, and compared them.</p>
+<p>The renderer is a few hundred lines of three.js and <a href="https://github.com/NASA-AMMOS/3DTilesRendererJS">3d-tiles-renderer</a>, driven headlessly by Puppeteer. On a laptop GPU (Apple M5, Metal) a 2,048 px shot takes 6–14 seconds. The first map area (Skanderbeg Square to Grand Park and the lake, about 10 km²) was 80 shots, rendered in 13.6 minutes, and the whole session used <strong>one</strong> root request to Google. The first version of this project had used one request per tile.</p>
+<h2 id="first-try">3. The first try (and what was wrong with it)</h2>
+<p>The project started earlier with another AI agent. It trained a first LoRA called <code>s1000</code> on 320 Tirana pairs. Its painted, pixel-art look was liked straight away, but three things were wrong with it:</p>
+<ol>
+  <li><strong>Every tile had its own camera.</strong> Neighbouring tiles did not line up exactly, so they were blended at the edges, which left ghosted trees.</li>
+  <li><strong>The training images had been told to be flat.</strong> Their prompt literally said <q>every surface a single flat colour fill … a limited palette of about 24 colours</q>, and used a screenshot of isometric.nyc as the style reference. So the model learned that big plazas are flat beige.</li>
+  <li><strong>Shadows became objects.</strong> Google's textures have the afternoon shadows baked in, and the model read a dark shadow band across Skanderbeg Square as a grey path.</li>
+</ol>
+<p>The camera fix and the sampler fix (section 7) solved the first problem without any retraining. The other two needed better training data.</p>
+
+<h2 id="teacher">4. Choosing a teacher: 9 models, 3 hard spots</h2>
+<p>The method everyone converged on is: <em>use an expensive model as the teacher and a cheap fine-tuned model as the painter</em>. The teacher only has to draw about a hundred good examples. So we ran a small bake-off on fal.ai with three deliberately hard spots: Skanderbeg Square (paving and shadows), the Pyramid (complex geometry and the colourful boxes added in its 2023 renovation) and the lake shore (water). Every model got the same instruction, written as tiny.london recommends, <q>how to draw, never what to draw</q>: draw exactly what the render shows, add and remove nothing, keep texture as fine pixel patterns, draw shadows as shading and never as objects.</p>
+<div class="table-wrap">
+<table>
+  <thead><tr><th>Model</th><th>Square</th><th>Pyramid</th><th>Lake</th><th class="n">≈ $ / image</th></tr></thead>
+  <tbody>
+    <tr><td>GPT Image 2.5 "Sunburst"</td><td class="good">paving kept, shadow as shading</td><td class="good">faithful</td><td class="good">natural water</td><td class="n">0.05</td></tr>
+    <tr><td>GPT Image 2.6</td><td class="good">faithful</td><td class="good">faithful</td><td class="good">best water</td><td class="n">0.10</td></tr>
+    <tr><td>Nano Banana 2.1</td><td class="warn">invented market stalls</td><td class="good">faithful</td><td class="warn">heavy outlines</td><td class="n">0.05</td></tr>
+    <tr><td>FLUX.2 Max</td><td class="warn">invented patterns</td><td class="warn">geometry altered</td><td class="warn">pier moved</td><td class="n">0.15</td></tr>
+    <tr><td>Nano Banana Pro</td><td class="warn">invented a shadow and people</td><td class="bad">invented an amphitheatre</td><td class="warn">comic style</td><td class="n">0.15</td></tr>
+    <tr><td>Seedream 5 Pro</td><td class="bad">photo copy</td><td class="bad">photo copy</td><td class="bad">photo copy</td><td class="n">0.07</td></tr>
+    <tr><td>Qwen Image 3</td><td class="bad">pasted the style example in</td><td class="bad">photo copy</td><td class="bad">photo copy</td><td class="n">0.04</td></tr>
+  </tbody>
+</table>
+</div>
+<p>The winner was <strong>GPT Image 2.5 Sunburst</strong>. It was the most faithful, and it was the only one that drew the shadow band as shading. Its look was softer than FLUX.2 Max, so we gave it a FLUX.2 drawing as its style example. Each spot got an example from a <em>different</em> place, so there was nothing in it to paste. That kept Sunburst's fidelity and moved the look toward FLUX's crisper pixels.</p>
+
+<h2 id="data">5. Making training data that can be trusted</h2>
+<p>We picked 125 frames of 1,024 px:</p>
+<ul>
+  <li><strong>20 hard spots</strong> inside the map: both halves of Skanderbeg Square, the Pyramid, the castle, the Lana in three places, the lake shores, both stadiums, Blloku, TID Tower, the old station boulevard.</li>
+  <li><strong>45 random cells</strong> inside the map.</li>
+  <li><strong>60 places outside the map</strong>, so the model also learns districts it hasn't seen: socialist-era blocks in Yzberisht and Kombinat, Laprakë, Sauk, the ring road, the Dajti foothills, Farka lake.</li>
+</ul>
+<p>Four more frames were kept out completely, so later checkpoints could be judged on places the model never saw: Mother Teresa Square, Air Albania Stadium, a residential block, and a patch of Grand Park.</p>
+<p>Every teacher drawing is checked automatically against its render before it is trusted, because <q>vision-model judges were the weakest link</q> (tiny.london). We used three numbers, calibrated on the bake-off images whose verdicts we already knew:</p>
+<div class="table-wrap">
+<table>
+  <thead><tr><th>Check</th><th>What it catches</th><th>Example caught</th><th>Rule</th></tr></thead>
+  <tbody>
+    <tr><td>Edge correlation, whole frame</td><td>invented or moved buildings</td><td>Nano Banana Pro's amphitheatre: 0.04</td><td class="n">≥ 0.45</td></tr>
+    <tr><td>Edge correlation, worst 64 px block</td><td>a local paste or invention</td><td>Qwen's pasted building: 0.00</td><td class="n">≥ 0.25</td></tr>
+    <tr><td>Edge correlation, upper bound</td><td>photo copies</td><td>Seedream: 0.87–0.89</td><td class="n">≤ 0.85</td></tr>
+  </tbody>
+</table>
+</div>
+<p>A drawing that fails is redrawn, up to three times, and then the frame is dropped. Of 140 calls, 19 were rejected, and 4 frames were dropped. 121 pairs remained, for about <strong>$8.40</strong>. We checked every dropped frame by eye. They were all right to drop: in one, the teacher had quietly zoomed and re-framed the scene.</p>
+<h2 id="training">6. Training the painter</h2>
+<p>The painter is <a href="https://huggingface.co/Qwen">Qwen-Image 2.1 Turbo</a>, an open 20-billion-parameter image model that needs only 8 sampling steps, plus a LoRA: a small add-on (rank 32, 159 MB) trained with <a href="https://github.com/ostris/ai-toolkit">ai-toolkit</a>. The render goes in twice: as image tokens in the prompt and as clean latents in the sequence. It is the same "edit" setup the first model was trained with.</p>
+<p>The LoRA started from the first model, <code>s1000</code>, which itself started from tiny.london's published LoRA. So it already knew the camera, the scale and Tirana's buildings, and the 121 new pairs only had to move the style. It ran for 2,000 steps at 3.2 s per step on a Colab G4 (an NVIDIA RTX PRO 6000, 96 GB), about 2 hours, with a checkpoint every 250 steps.</p>
+<p>Later checkpoints are not automatically better. We measured three of them on 12 views, using the same edge check (fidelity) and a sharpness measure (crispness):</p>
+<div class="table-wrap">
+<table>
+  <thead><tr><th>Checkpoint</th><th class="n">Fidelity</th><th class="n">Crispness</th><th>Note</th></tr></thead>
+  <tbody>
+    <tr><td>step 1,250</td><td class="n">0.847</td><td class="n">28.9</td><td>softer; more faithful than step 2,000 on all 12 views</td></tr>
+    <tr><td>step 1,500</td><td class="n">0.861</td><td class="n">32.7</td><td>the most faithful</td></tr>
+    <tr><td>step 2,000</td><td class="n">0.827</td><td class="n">33.4</td><td>the crispest, but starting to drift from the geometry</td></tr>
+  </tbody>
+</table>
+</div>
+<figure class="breakout">
+  <picture><source srcset="how/ckpt_sheet.avif" type="image/avif"><img src="how/ckpt_sheet.webp" alt="The Pyramid painted by six checkpoints from step 750 to step 2000" width="1200" height="829" loading="lazy" decoding="async"></picture>
+  <figcaption>The Pyramid, painted by checkpoints 750 to 2,000. The differences are small by step 1,250: training had essentially converged.</figcaption>
+</figure>
+
+<h2 id="sampler">7. Painting without seams</h2>
+<p>The painter only ever sees <strong>one 1,024 × 1,024 px window at a time</strong>. The map is 20,480 × 16,384 px. So how does a model that paints small squares produce one big picture with no visible joins?</p>
+<p><strong>The obvious way doesn't work.</strong> Cut the city into 1,024 px tiles, paint each one, and stitch them together, and you get seams: each tile is painted <q>by a slightly different artist</q>, so a tree or a roof changes colour exactly where two tiles meet. The first version of this map was painted roughly that way.</p>
+<p><strong>What works is painting all the tiles at the same time.</strong> An image model doesn't paint in one stroke. It starts from random noise and cleans it up in a few steps (8 for this model). The trick, called joint sampling or MultiDiffusion and used by tiny.london, is to run those steps on the whole city at once:</p>
+<ol>
+  <li>The whole map starts as <em>one</em> canvas of noise.</li>
+  <li>At each step, the model looks at every overlapping 1,024 px window across the canvas, with each window's piece of the 3D render as its guide. Windows start every 768 px, so neighbours share a 256 px strip.</li>
+  <li>Each window proposes how its pixels should change. Where windows overlap, the proposals are averaged, with more weight toward each window's centre (a "tent" that falls to zero at the edges).</li>
+  <li>On the next step the whole window grid shifts by half a window, so window edges never sit in the same place twice in a row.</li>
+</ol>
+<p>Every pixel is decided by several overlapping windows at every step, so neighbouring areas have to agree, and no seam can form. For the central map that is 1,157 window positions × 8 steps, about 9,000 model calls. On one GPU it takes 48 minutes.</p>
+<pre><code>for each of the 8 steps:
+    velocity = 0, weight = 0
+    for each 1,024 px window (768 px apart; odd steps use a grid shifted 384 px):
+        v = model(window of the latent, its render crop, step)
+        velocity += v × tent   # tent: 0 at the window edge, flat in the middle 512 px
+        weight   += tent
+    latent += (σ_next − σ) × velocity / weight</code></pre>
+<h3>Blocks, for the whole city</h3>
+<p>The whole city (about 75 km² across all 11 urban districts) is too big for one canvas in memory. So it is painted in <strong>blocks</strong> of 8,192 px that overlap their neighbours by 1,024 px. Blocks are done in four rounds, like the four colours of a checkerboard, so blocks in the same round never touch. Each new block keeps the strip its finished neighbours already painted fixed ("pinned") and grows out of it: at every step, the pinned pixels are reset to the finished painting, noised to match the current step. So blocks continue each other instead of being glued together. Every block is saved as soon as it is done, so a dropped GPU session loses at most one block.</p>
+<figure class="breakout">
+  <picture><source srcset="how/map_overview.avif" type="image/avif"><img src="how/map_overview.webp" alt="The whole painted city of Tirana, from the northern suburbs to Farka Lake" width="1200" height="892" loading="lazy" decoding="async"></picture>
+  <figcaption>The whole city: about 2.6 billion painted pixels in one canvas of 79,872 × 59,392 px, painted on three GPUs in about five hours, with no visible seams. The empty corners are outside the 11 urban districts.</figcaption>
+</figure>
+
+<p>The airport was the first test: 7 blocks, painted in about 70 minutes, with no visible joins across the runway or the terminal apron. For the whole city the blocks are split into three regions painted on three GPUs at once, with a line of seam blocks between them that is painted last, pinned to both sides. A small mistake that nearly cost hours: the blocks start every 7,168 px, which is 3.5 × the 2,048 px render grid, so every other column of blocks sits on render shots shifted by 1,024 px. The painter and the water clean-up both first assumed one grid and silently skipped half the shots.</p>
+<p>The bigger lesson came at the end. In the overview the city looked seamless, but at full size many block edges were hard cuts: half a house on one side, a different house on the other, and a straight line through the Grand Park forest. With only 8 steps, the model decides the layout while the pinned strip is still mostly noise, so a new block can ignore its neighbour. Every block line was checked by measuring the jump in pixels across it and comparing that with lines where no block edge can be. The bad ones were repainted in narrow strips. Each strip starts from the painting itself, partly noised, keeps its edges fixed and lets only the middle be painted again, so the model keeps the layout and just mends the cut. After that the block lines can't be told apart from any other line in the picture. On calm lakes a faint tone difference survived, and it was smoothed out separately.</p>
+<h3>Water that stays water</h3>
+<p>Tirana Lake is shallow along its western shore, and in Google's 3D model you can see weeds and silt under the surface. The painter took those dark, blotchy shapes for land and drew a small forest in the lake. The fix comes before painting: OpenStreetMap's outline of each lake is projected onto the render at that lake's own water level. The level comes from free elevation data, calibrated so Tirana Lake matches. Inside the outline the render is calmed into almost flat water. Then only the water and a thin band of shore are repainted, with the rest of the painting held fixed. The same clean-up runs on every lake and pond of the wider city before it is painted, and it leaves OpenStreetMap's piers and jetties alone: the first lake fix painted the two piers on Tirana Lake into water, and they had to be put back.</p>
+<p>A few places are blurred on purpose in Google's 3D model: sharp-edged polygons with a smear inside, the way some sensitive sites are hidden. The painter copied the smear faithfully. Those spots were found by looking for areas with almost no fine detail, apart from water. They were then filled with neutral painted ground: forest on the hillside, and grass and trees with a pale kerb in the city. The texture is borrowed from nearby parts of the painting, and nothing was invented about what is really there.</p>
+<h2 id="viewer">8. The viewer</h2>
+<p>The map page is plain HTML, CSS and one small JavaScript module, with no framework and no build step. <a href="https://openseadragon.github.io">OpenSeadragon</a> shows a deep-zoom pyramid of 512 px tiles, self-hosted from the same origin. Pixels switch to nearest-neighbour above 100 % zoom, so the pixel art stays crisp.</p>
+<ul>
+  <li><strong>Tiles are AVIF</strong>, with WebP for browsers that can't show AVIF. The most-zoomed level keeps texture (AVIF q75, which matched WebP q90 at 35.7 vs 36.0 dB). Zoomed-out levels are compressed harder. The whole map is 84 MB as AVIF, against 134 MB as WebP q90.</li>
+</ul>
+<figure>
+  <picture><source srcset="how/tiles_codec.avif" type="image/avif"><img src="how/tiles_codec.webp" alt="One tile at 4x zoom: original, WebP q90, WebP q82, AVIF q60, AVIF q50" width="1400" height="301" loading="lazy" decoding="async"></picture>
+  <figcaption>One tile at 4× zoom. WebP q82 and AVIF q50 smooth away the pixel texture; AVIF q75 (not shown) keeps it.</figcaption>
+</figure>
+<ul>
+  <li><strong>Search runs in your browser</strong> over 1,337 OpenStreetMap places, streets and landmarks. It is loaded only when you first click the search box (26 KB). It ignores diacritics and knows a few English words, so <em>skanderbeg</em>, <em>pyramid</em> and <em>nene tereza</em> all work.</li>
+  <li><strong>The address bar holds the view</strong> (<code>#lat,lon,zoom</code>), so any link opens the same spot. The projection maths runs in the page too, accurate to a few centimetres in the centre.</li>
+  <li>Albanian and English, light and dark, phone layout, keyboard shortcuts (<kbd>/</kbd> to search).</li>
+  <li>No server code. Tiles are static files in immutable, versioned folders, cached for a year.</li>
+</ul>
+
+<h3>Live planes</h3>
+<p>Planes come from free ADS-B feeds (adsb.lol, with adsb.fi as a backup). A tiny server-side function asks once every five seconds for all visitors, so the feed is never hammered. On an isometric map, raising something only moves it straight up the screen. So a plane is drawn up at its height, with a dashed line down to its shadow on the exact ground spot. Real altitudes would put cruising jets far off the map, so the drawn height is squeezed: true near the ground, at most about 600 m. The label shows the real altitude. The planes themselves are a little toy airliner built in three.js and pre-drawn from the map's own camera at 32 headings, the way tiny.lisbon does its trams and planes.</p>
+<h2 id="living">9. A living map</h2>
+<p>The painting is a still image, so everything that moves on it is drawn live in the browser on top of it. The hard part is not the animation. It is making things sit exactly on the painted streets and disappear behind the painted buildings.</p>
+<h3>Heights from the 3D model</h3>
+<p>A point on this map is a latitude, a longitude <em>and a height</em>: with the camera tilted 45°, every metre of height moves a point about 5 px up the screen at full zoom. Free elevation data turned out to be a surface model in the city (it includes the buildings), reading 7–9 m too high everywhere, and the camera's own anchor height was 9 m above the real ground of Skanderbeg Square. Both put buses and markers visibly beside their streets.</p>
+<p>The fix comes from the same Google 3D model the map was painted from. A second render, the <strong>height pass</strong>, stores the height of whatever surface the camera sees at every pixel instead of its colour. Streets are the lowest visible surface around them, so the street level at any point can be read straight off it. The first version of that reader iterated, and when a guess landed on a big roof it bounced between roof and street and sometimes stopped at nonsense (279 m), bending 45 of 48 bus routes. It now scans the possible heights for the one where the projected point really sits at street level. Behind a tall building, where the street is hidden, heights are filled in between the visible ends, so roads stay straight.</p>
+<h3>Hidden behind buildings and trees</h3>
+<p>The same height pass doubles as a depth test. Where a roof or a tree canopy is higher than the road at that pixel, the road is hidden from the camera. Buses and cars fade out there and continue as a faint "x-ray" silhouette, and a bus you follow keeps a coloured outline so you never lose it. Bus routes stay visible at half strength under trees and roofs.</p>
+<h3>What moves</h3>
+<ul>
+  <li><strong>Buses</strong> follow the city's own published timetable (GTFS, Municipality of Tirana, CC BY-SA). Each bus is where the timetable says it is right now, with a lines menu, stops you can tap and next departures.</li>
+  <li><strong>Planes</strong> are live ADS-B positions (adsb.lol, adsb.fi), drawn at a squeezed altitude with a shadow on the ground. The airport is painted as its own island, and taking-off planes run along the painted runway.</li>
+  <li><strong>Cars</strong> are a calm trickle on main roads only: they follow the car ahead, yield at junctions and queue behind buses.</li>
+  <li><strong>Birds</strong>: the Muscovy ducks, coots, grebes and swans that actually live on Tirana Lake.</li>
+</ul>
+<p>Buses, planes and cars are pre-drawn as small 3D toys from the map's exact camera at 32 headings, so they share the painting's angle. They all use one size rule (true metres, one shared minimum), so a bus is always about 2.7 cars long.</p>
+
+<h2 id="rotation">10. Turning the city around</h2>
+<p>None of the other AI-painted maps can rotate, because a painting has only one side. We render and paint the map from four directions (NW, NE, SE, SW). The renderer also records the height of every pixel from Google's mesh, so each painting can be lifted into 3D. When you press rotate, the browser (WebGL) draws the two nearest paintings from the turning camera and blends them per pixel by depth and angle. Where one painting couldn't see a wall, the other fills it in. At each of the four directions you see the painting exactly. In between, it is a 0.9-second orbit around the spot at the centre of the screen.</p>
+<figure class="breakout">
+  <picture><source srcset="how/orbit.avif" type="image/avif"><img src="how/orbit.webp" alt="The Pyramid mid-rotation: top row with four painted directions shows smears; bottom row with eight is clean" width="1200" height="800" loading="lazy" decoding="async"></picture>
+  <figcaption>The Pyramid halfway through a turn. Top: blending four painted directions. Bottom: eight. Eight is cleaner, but the in-between frames are only on screen for a fraction of a second, so the full map uses four.</figcaption>
+</figure>
+<p>Before that we tried a flat 2D "turntable" warp, which rotated, sheared and zoomed the picture all at once. It made at least one person feel queasy, and the honest verdict was <q>so bad I puked in my mouth a bit</q>. Real depth fixed it.</p>
+
+<h2 id="colab">11. The GPU: Google Colab from the terminal</h2>
+<p>Everything heavy (training the painter, every checkpoint test and every full painting) ran on <strong>Google Colab</strong>, driven entirely from the command line with the <a href="https://pypi.org/project/google-colab-cli/">Colab CLI</a>. No notebook was ever opened in a browser.</p>
+<div class="table-wrap">
+<table>
+  <thead><tr><th>Item</th><th>Value</th></tr></thead>
+  <tbody>
+    <tr><td>GPU</td><td>Colab "G4": NVIDIA RTX PRO 6000 Blackwell, 96 GB</td></tr>
+    <tr><td>Machine</td><td>176 GB RAM, 236 GB disk</td></tr>
+    <tr><td>Price</td><td class="n">≈ 10 compute units / hour (≈ $1 / hour)</td></tr>
+    <tr><td>One 1,024 px painting</td><td class="n">≈ 5 s</td></tr>
+    <tr><td>Training (2,000 steps)</td><td class="n">≈ 2 h · ≈ 20 units</td></tr>
+    <tr><td>Central map (335 MP)</td><td class="n">≈ 48 min · ≈ 8 units</td></tr>
+    <tr><td>Everything so far</td><td class="n">≈ 60 units (≈ $6)</td></tr>
+  </tbody>
+</table>
+</div>
+<p>The workflow:</p>
+<pre><code>colab new -s tirana --gpu G4                  # rent the GPU
+colab exec -s tirana -f setup_cell.py          # install ai-toolkit, download the model (background, ~10 min)
+upload_big.sh tirana main_canvas.png /content/  # 700 MB in 20 MB parts, sha256-checked
+colab exec -s tirana -f launch_full.py         # start the painting as a background process
+colab exec -s tirana --env LOG=... -f peek.py  # poll its log every few minutes
+download_big.sh tirana /content/full/map.png .  # parts again, checksum again
+colab stop -s tirana                           # stop paying</code></pre>
+<p>Things that only work if you know them:</p>
+<ul>
+  <li><strong>Long jobs run as background processes on the machine</strong>, never inside the <code>exec</code> call. The connection to the notebook kernel freezes now and then, sometimes for 15 minutes or more, even with a timeout set. A job tied to that connection would die with it. So the job writes to a log file, and short polls read it.</li>
+  <li><strong>Big files go in 20 MB parts with checksums.</strong> Single uploads over a few hundred MB fail with a server error.</li>
+  <li><strong>Two jobs can share the GPU</strong>, since 96 GB holds two paintings at once, but total speed barely changes and a third one ran out of memory. One GPU, one or two jobs.</li>
+  <li><strong>Several GPUs at once work</strong>: this account could hold three G4 sessions in parallel. For the whole city that turns roughly 6 hours into 2, because blocks in the same checkerboard round are independent.</li>
+  <li>The machine's clock is UTC, the high-memory option is refused for the G4, and a session is billed while it exists, busy or not. So the last command of every run is <code>colab stop</code>.</li>
+</ul>
+
+<h2 id="costs">12. What it cost</h2>
+<div class="table-wrap">
+<table>
+  <thead><tr><th>Item</th><th class="n">Cost</th><th>Notes</th></tr></thead>
+  <tbody>
+    <tr><td>Google 3D tiles</td><td class="n">$0</td><td>about 25 root requests in total, well inside the free tier (about 1,000 a month)</td></tr>
+    <tr><td>Teacher bake-off (fal.ai)</td><td class="n">≈ $3</td><td>about 40 images, 9 models</td></tr>
+    <tr><td>Training data (fal.ai)</td><td class="n">≈ $8.40</td><td>140 Sunburst calls, 121 accepted pairs</td></tr>
+    <tr><td>Colab G4, so far</td><td class="n">≈ $6</td><td>about 60 compute units: training, every checkpoint test, the full paintings</td></tr>
+    <tr><td>One full painting of this area</td><td class="n">≈ $0.80</td><td>8 compute units, 48 minutes</td></tr>
+    <tr><td>Hosting</td><td class="n">$0</td><td>static files on Cloudflare's free tier</td></tr>
+  </tbody>
+</table>
+</div>
+<p>For comparison: painting the same map with the teacher directly would be about 1,160 calls (≈ $60) and still wouldn't be seamless.</p>
+
+<h2 id="lessons">13. What we learned</h2>
+<ol>
+  <li><strong>Get the camera right before anything else.</strong> One camera, moved by whole pixels. Everything downstream depends on it.</li>
+  <li><strong>Seams are a sampling problem, not a model problem.</strong> Joint sampling removed them on the first try.</li>
+  <li><strong>The teacher's prompt becomes the map.</strong> "Flat fills" in a prompt a year ago became a flat Skanderbeg Square.</li>
+  <li><strong>A style example can be pasted in as content.</strong> Give multi-image models an example from somewhere else, or no image at all, and check for pasting.</li>
+  <li><strong>Check every training image against ground truth, with numbers.</strong> Calibrate the thresholds on images whose verdicts you already know.</li>
+  <li><strong>Later checkpoints are not automatically better.</strong> Measure fidelity and look at places the model never saw.</li>
+  <li><strong>Baked-in shadows are part of the input.</strong> Tell the teacher what they are.</li>
+  <li><strong>Make every stage resumable and every output checksummed.</strong> Large uploads failed, an export was cut in half, and GPU jobs ran out of memory. Nothing was lost because every stage could restart.</li>
+</ol>
+
+<h2 id="credits">14. Credits</h2>
+<p><strong>Method:</strong> <a href="https://tiny.london/how/">tiny.london</a> (Boris Starkov), <a href="https://cannoneyed.com/projects/isometric-nyc">isometric.nyc</a> (Andy Coenen), <a href="https://iso.sloptoronto.ca/how">Isometric Toronto</a> (John Fewell), <a href="https://isometricistanbul.com/en/docs">Isometric Istanbul</a> (Yahya Bedirhan Pak), <a href="https://tinyprague.com/making/">Tiny Prague</a> (Martin Janoušek), <a href="https://pixelberlin.com/how">Pixel Berlin</a>, <a href="https://sf.isopolis.city">Isopolis</a>, and everyone listed on <a href="https://tiny.london/world/">tiny.london/world</a>.</p>
+<p><strong>Data:</strong> 3D geometry and textures © 2026 Google (Photorealistic 3D Tiles). Place and street names © <a href="https://www.openstreetmap.org/copyright">OpenStreetMap contributors</a> (ODbL).</p>
+<p><strong>Models:</strong> Qwen-Image 2.1 Turbo (Alibaba, Qwen Research Licence, non-commercial). The LoRA started from tiny.london's published LoRA (non-commercial). Teacher drawings by GPT Image 2.5 via fal.ai; the style example was drawn by FLUX.2 Max.</p>
+<p><strong>Tools:</strong> three.js, 3d-tiles-renderer, Puppeteer, ai-toolkit (ostris), OpenSeadragon, Google Colab.</p>
+<p id="privacy"><strong>Privacy:</strong> the map keeps anonymous, cookieless statistics, so we can see which places and features people use. That covers visits (Cloudflare Web Analytics) and a few events: which landmark card was opened, which layer was switched, whether a search found something, how long a card stays open, and every 30 seconds the map centre rounded to about 1 km. It also counts how long the map is visible, how fast the first tiles load and the frame rate, script errors, the window width in 100 px steps, touch or mouse, and the browser language. The server keeps the country only, never the IP address. There is no cookie, no persistent ID and no search text. A random number groups one visit's events and disappears when the tab closes. If your browser sends Do Not Track or Global Privacy Control, nothing is sent at all. The live-plane positions come from public ADS-B feeds (adsb.lol, adsb.fi).</p>
+<h2 id="shape">15. The shape of Tirana</h2>
+<p>The painting was made in square blocks, so its raw outline is a staircase of rectangles. The map you see is cut to the shape of the city instead, with clouds around it, the way tiny.london does it.</p>
+<ul>
+  <li><strong>What counts as land:</strong> Tirana's 11 urban units, plus the built-up city next to them (every OpenStreetMap building and built-up area within about 600 m), so the coast runs where houses give way to fields, not through a street just because an administrative line does.</li>
+  <li><strong>Connectors:</strong> smooth "worms" along a few lines join the city to the airport, Mount Dajti, Farka Lake and Tirana East Gate. Each one is as wide as the painting allows and never wider.</li>
+  <li><strong>The coast:</strong> a distance field from the land, pushed out about 50 m and wobbled by layered noise, with wide bays where the land runs along the painting's edge. It is computed at 1/16 scale and smoothed up to full size, with a 3 px soft edge. Small cloud ponds inland and stray islets are removed, so it is one landmass.</li>
+  <li><strong>The clouds</strong> are a small tileable texture behind the map. They move with it, and only show where the painting is transparent.</li>
+</ul>
+
+<h2 id="dajti">16. Dajti and the cable car</h2>
+<p>Mount Dajti rises behind the city, and the Dajti Ekspres gondola climbs it. The mountain was painted in 14 extra blocks on three Colab GPUs at once, one column apart so neighbours never paint at the same time; the middle column went last, pinned to both sides.</p>
+<p>The cable itself is too thin for the 3D model, so the painting shows the stations but no line. The cable car on the map is drawn live instead: the real line from OpenStreetMap, 16 pylons on the terrain, a little sag between them, and red cabins about every 100 m moving at the real speed (the ride takes about 15 minutes).</p>
+
+<h2 id="who">17. Who made this, and more maps</h2>
+<p>Tiny Tirana was made by <a href="https://github.com/okanerturan">@okanerturan</a> together with <strong>Claude</strong>, Anthropic's AI model, working in Claude Code. To be plain about it: Claude wrote almost all of the code, ran the renders, the training and the GPU paintings, checked the results and wrote the notes this page is built from. The human picked the city, the look and the landmarks, and said "no, again" when something was off, which was often. Claude's mistakes are in the story too: seams it had to heal, ducks that looked like fish, and one evening a map that was only clouds because it pointed the site at tiles that didn't exist yet. Each got fixed.</p>
+<p>The code is on <a href="https://github.com/okanerturan/tiny-tirana">GitHub</a>. The painting, the model and the Google-derived material stay non-commercial (see Credits).</p>
+<p><strong>More maps:</strong> our <a href="../world/">atlas of isometric cities</a> puts every map we know on a globe, with how each was made. tiny.london keeps its own list at <a href="https://tiny.london/world/">tiny.london/world</a>, the atlas that started it. If you made one and it is missing, it should be in both.</p>
+
+<footer>Tiny Tirana is a personal, non-commercial project. It is a painting, not a survey: buildings can be out of date, and small details are an artist's (well, a model's) interpretation. <a href="./">Back to the map</a>.</footer>
+</main>
+</body>
+</html>

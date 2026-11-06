@@ -1,0 +1,388 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<meta name="description" content="Every little isometric city map we could find, painted by AI or built in code, on one spinning globe, with how each was made.">
+<title>Isometric Cities Atlas</title>
+<link rel="icon" type="image/svg+xml" href="../app/brand/favicon.svg">
+<link rel="preload" href="vendor/countries-110m.json" as="fetch" crossorigin>
+<link rel="preload" href="maps.json" as="fetch" crossorigin>
+<style>
+/* ---------- reset (good-css: foundations) ---------- */
+*, *::before, *::after { box-sizing: border-box; min-width: 0; }
+:root {
+  interpolate-size: allow-keywords; text-wrap: pretty; overflow-wrap: break-word; font-synthesis: none;
+  -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; -webkit-text-size-adjust: 100%; -webkit-tap-highlight-color: transparent;
+}
+body { margin: 0; min-block-size: 100svh; }
+h1, h2, h3 { text-wrap: balance; }
+img, svg, video { display: block; max-width: 100%; height: auto; }
+input, textarea, select { font-size: max(16px, 1rem); }
+button, a, summary, [role="button"] { touch-action: manipulation; }
+button, [role="button"] { user-select: none; -webkit-user-select: none; }
+[hidden] { display: none !important; }
+
+/* ---------- tokens: one set for light and dark (OKLCH) ---------- */
+:root {
+  color-scheme: light dark;
+  --bg: light-dark(oklch(0.972 0.01 85), oklch(0.175 0.014 255));
+  --panel: light-dark(oklch(0.99 0.006 85), oklch(0.21 0.016 255));
+  --card: light-dark(oklch(1 0 none), oklch(0.245 0.016 255));
+  --fg: light-dark(oklch(0.27 0.02 50), oklch(0.95 0.006 85));
+  --muted: light-dark(oklch(0.5 0.02 60), oklch(0.75 0.012 80));
+  --line: color-mix(in oklch, var(--fg) 10%, transparent);
+  --line-strong: color-mix(in oklch, var(--fg) 18%, transparent);
+  --accent: oklch(0.74 0.15 64);
+  --accent-ink: oklch(0.28 0.06 60);
+  --ft: oklch(0.64 0.15 38); --ig: oklch(0.6 0.14 290); --cd: oklch(0.62 0.11 170); --un: oklch(0.64 0 none);
+  /* globe (read by globe.js through a probe element, so canvas follows light/dark too) */
+  --sea: light-dark(oklch(0.87 0.042 225), oklch(0.31 0.05 245));
+  --sea-hi: light-dark(oklch(0.935 0.03 212), oklch(0.38 0.055 240));
+  --sea-deep: light-dark(oklch(0.79 0.058 233), oklch(0.245 0.045 252));
+  --land: light-dark(oklch(0.975 0.022 92), oklch(0.44 0.03 86));
+  --land-side: light-dark(oklch(0.74 0.08 56), oklch(0.29 0.045 52));
+  --land-shadow: light-dark(oklch(0.5 0.07 236 / 0.26), oklch(0.08 0.03 255 / 0.5));
+  --coast: light-dark(oklch(0.67 0.07 62), oklch(0.58 0.05 75));
+  --border: light-dark(oklch(0.72 0.045 70 / 0.9), oklch(0.62 0.03 75 / 0.6));
+  --grat: light-dark(oklch(0.45 0.07 235 / 0.13), oklch(0.85 0.05 240 / 0.08));
+  --atmo: light-dark(oklch(0.84 0.075 226 / 0.9), oklch(0.62 0.14 245 / 0.55));
+  --shade: light-dark(oklch(0.36 0.07 248 / 0.3), oklch(0.07 0.03 258 / 0.62));
+  --spec: light-dark(oklch(1 0 none / 0.42), oklch(1 0 none / 0.09));
+  --rim: light-dark(oklch(0.6 0.07 236 / 0.5), oklch(0.78 0.1 240 / 0.45));
+  --ground: light-dark(oklch(0.4 0.05 60 / 0.2), oklch(0 0 none / 0.55));
+
+  --shadow-s: 0 1px 2px oklch(0.3 0.03 60 / 0.07), 0 2px 8px oklch(0.3 0.03 60 / 0.06);
+  --shadow-l: 0 2px 6px oklch(0.3 0.03 60 / 0.07), 0 14px 34px oklch(0.3 0.03 60 / 0.13);
+  --radius: 18px;
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+  --text-xs: 0.6875rem;
+  --text-s: 0.8125rem;
+  --font: ui-rounded, "SF Pro Rounded", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+html { overscroll-behavior-y: none; background: var(--bg); }
+@media (any-pointer: coarse) { html { overscroll-behavior-y: auto; } }
+body { background: var(--bg); color: var(--fg); font: 0.9375rem/1.45 var(--font); }
+:focus-visible { outline: max(2px, 0.08em) solid var(--accent); outline-offset: 2px; }
+.sr { position: absolute; inline-size: 1px; block-size: 1px; overflow: clip; clip-path: inset(50%); white-space: nowrap; }
+
+/* ---------- shell: one column on phones; stage + list panel side by side on wide screens ---------- */
+.shell { display: grid; grid-template-columns: minmax(0, 1fr); }
+.stage { container: stage / inline-size; position: relative; isolation: isolate; overflow-x: clip; }
+/* a faint dotted "map paper" behind the globe */
+.stage::before {
+  content: ""; position: absolute; inset: 0; z-index: -1; pointer-events: none;
+  background: radial-gradient(circle, color-mix(in oklch, var(--fg) 13%, transparent) 1px, transparent 1.5px) 0 0 / 22px 22px;
+  mask-image: radial-gradient(ellipse 70% 65% at 62% 48%, black, transparent 78%);
+}
+.stage-grid {
+  display: grid; grid-template-columns: minmax(0, 1fr);
+  grid-template-areas: "hero" "globe" "wave" "stats";
+  padding-inline: 1rem; padding-block: calc(1.25rem + env(safe-area-inset-top, 0px)) 1.5rem;
+  row-gap: 1rem;
+}
+.hero { grid-area: hero; }
+.stats { grid-area: stats; }
+.globe { grid-area: globe; }
+.wave { grid-area: wave; }
+.globe { position: relative; aspect-ratio: 1 / 0.94; margin-inline: -1rem; }
+
+/* wide screens: the list is a panel that stays put beside the stage, and scrolls on its own */
+@media (width >= 60rem) {
+  .shell { grid-template-columns: minmax(0, 1fr) minmax(22rem, 26.5rem); align-items: start; }
+  .stage-grid { padding-inline: 2rem 1rem; padding-block: 2rem; }
+  .globe { margin-inline: 0; }
+}
+/* wide stage: one screen; words in a column on the left, the globe takes the rest, the wave floats over its foot */
+@container stage (width >= 50rem) {
+  .stage-grid {
+    block-size: 100dvh; min-block-size: 34rem;
+    grid-template-columns: minmax(17rem, 21rem) minmax(0, 1fr);
+    grid-template-rows: auto minmax(0, 1fr) auto;
+    grid-template-areas: "hero globe" ". globe" "stats globe";
+    column-gap: 1rem; padding-inline: clamp(1.5rem, 0.5rem + 2vw, 3rem) 0; padding-block: clamp(1.5rem, 0.75rem + 2vh, 3rem);
+  }
+  .globe { aspect-ratio: auto; margin-block: calc(-1 * clamp(1.5rem, 0.75rem + 2vh, 3rem)); min-block-size: 0; }
+  .wave { grid-area: globe; align-self: end; justify-self: center; inline-size: min(100% - 2rem, 38rem); z-index: 2; }
+  /* a zoomed globe fades out at the column edges instead of being cut */
+  .globe canvas { mask-image: linear-gradient(to right, transparent, black 2.5rem, black calc(100% - 1.5rem), transparent); }
+}
+
+/* ---------- hero copy ---------- */
+.eyebrow { display: flex; align-items: center; gap: 0.5rem; margin: 0 0 0.6rem; color: var(--muted); font-size: var(--text-s); font-weight: 650; }
+.eyebrow img { flex: none; inline-size: 1.35rem; block-size: 1.35rem; }
+h1 { margin: 0; font-size: clamp(2.15rem, 1.45rem + 2.1vw, 3.35rem); line-height: 0.98; letter-spacing: -0.035em; font-weight: 820; }
+h1 span { display: block; color: color-mix(in oklch, var(--ft), var(--fg) 25%); }
+.lede { margin: 0.85rem 0 0; color: color-mix(in oklch, var(--fg) 78%, var(--bg)); font-size: clamp(0.9375rem, 0.88rem + 0.2vw, 1.0625rem); line-height: 1.5; max-inline-size: 34ch; }
+.lede b { font-variant-numeric: tabular-nums; }
+
+/* ---------- stats strip: live counter + how they were made ---------- */
+.stats { display: grid; gap: 0.9rem; align-self: end; }
+.nums { display: flex; gap: clamp(1rem, 0.5rem + 2vw, 1.75rem); margin: 0; }
+.nums > div { display: flex; flex-direction: column-reverse; }
+.nums dt { color: var(--muted); font-size: var(--text-s); font-weight: 600; }
+.nums dd { margin: 0; font-size: clamp(1.9rem, 1.5rem + 1.2vw, 2.6rem); font-weight: 820; line-height: 1; letter-spacing: -0.03em; font-variant-numeric: tabular-nums; }
+.made { display: grid; gap: 0.55rem; }
+.made-h { margin: 0; font-size: var(--text-s); font-weight: 700; }
+.bar { display: flex; gap: 2px; block-size: 0.7rem; padding: 2px; border-radius: 999px; background: color-mix(in oklch, var(--fg) 7%, transparent); overflow: clip; }
+.bar span { flex: none; inline-size: var(--w, 0%); background: var(--c); border-radius: 999px; }
+.legend { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.4rem; }
+.legend li { --c: var(--un); display: grid; grid-template-columns: auto 1fr auto; column-gap: 0.5rem; align-items: baseline; font-size: var(--text-s); }
+.legend li::before { content: ""; inline-size: 0.6rem; block-size: 0.6rem; border-radius: 3px; background: var(--c); translate: 0 0.05em; }
+.legend b { font-weight: 650; }
+.legend .n { font-weight: 750; font-variant-numeric: tabular-nums; }
+.legend small { grid-column: 2 / -1; color: var(--muted); font-size: var(--text-xs); line-height: 1.35; }
+.made-note { margin: 0; color: var(--muted); font-size: var(--text-xs); }
+
+/* ---------- globe stage ---------- */
+.globe canvas { position: absolute; inset: 0; inline-size: 100%; block-size: 100%; cursor: grab; touch-action: none; }
+.globe[data-hot="true"] canvas { cursor: pointer; }
+.globe[data-dragging] canvas { cursor: grabbing; }
+/* labels that ride on the globe; positioned in canvas pixels by globe.js, so the offsets are physical */
+.flag, .tip, .callout { position: absolute; inset: 0 auto auto 0; z-index: 1; pointer-events: none; opacity: 1; visibility: visible;
+  transition: opacity 160ms var(--ease-out), visibility 160ms; }
+:is(.flag, .tip, .callout)[data-show="false"] { opacity: 0; visibility: hidden; }
+.tip > *, .callout > * { transform: translate(-50%, calc(-100% - 8px)); }
+.flag > * { transform: translate(-50%, 6px); }
+.flag-in { display: flex; align-items: center; gap: 0.35rem; padding: 0.2rem 0.6rem 0.2rem 0.2rem; white-space: nowrap;
+  font-size: var(--text-xs); font-weight: 750; color: var(--accent-ink); background: var(--accent); border-radius: 999px; box-shadow: var(--shadow-s); }
+.flag-in img { flex: none; inline-size: 1.4rem; block-size: 1.4rem; border-radius: 50%; background: var(--card); object-fit: cover; }
+.tip-in { padding: 0.3rem 0.6rem; white-space: nowrap; font-size: var(--text-s); font-weight: 650; background: var(--card); border-radius: 10px; box-shadow: var(--shadow-l); }
+.tip-in small { color: var(--muted); font-weight: 600; }
+.callout-in { --c: var(--un); display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; column-gap: 0.6rem; row-gap: 0.45rem;
+  inline-size: max-content; max-inline-size: min(17rem, 80vw); padding: 0.45rem 0.6rem 0.45rem 0.45rem;
+  background: var(--card); border: 1px solid color-mix(in oklch, var(--c) 30%, var(--line)); border-radius: 14px; box-shadow: var(--shadow-l); }
+.callout-in img, .callout-in .ph { inline-size: 2.75rem; block-size: 2.75rem; border-radius: 9px; object-fit: cover; }
+.callout-in b { display: block; font-size: var(--text-s); line-height: 1.25; overflow: clip; text-overflow: ellipsis; white-space: nowrap; }
+.callout-in span { display: block; color: var(--muted); font-size: var(--text-xs); overflow: clip; text-overflow: ellipsis; white-space: nowrap; }
+.callout-in a { grid-column: 1 / -1; pointer-events: auto; justify-self: stretch; text-align: center; padding: 0.35rem 0.7rem; border-radius: 999px;
+  font-size: var(--text-xs); font-weight: 750; text-decoration: none; color: var(--accent-ink); background: var(--accent); }
+.callout-in a:active { scale: 0.97; }
+/* little pointer under the callout and tooltip */
+.callout-in::after, .tip-in::after { content: ""; position: absolute; inset-block-end: -5px; inset-inline-start: calc(50% - 5px); inline-size: 10px; block-size: 10px;
+  background: inherit; rotate: 45deg; border-end-end-radius: 2px; }
+.callout-in, .tip-in { position: relative; }
+.callout-in::after { border-inline-end: 1px solid color-mix(in oklch, var(--c) 30%, var(--line)); border-block-end: 1px solid color-mix(in oklch, var(--c) 30%, var(--line)); }
+
+.caption { position: absolute; inset-inline: 1rem; inset-block-start: clamp(0.25rem, 2%, 1.5rem); z-index: 1; margin: 0; display: grid; justify-items: center; pointer-events: none;
+  text-align: center; opacity: 0; transition: opacity 260ms var(--ease-out); }
+.caption[data-show="true"] { opacity: 1; }
+.caption strong { font-size: clamp(1.25rem, 0.95rem + 1.2vw, 1.9rem); font-weight: 820; letter-spacing: -0.025em; line-height: 1.1;
+  padding: 0.35rem 0.9rem; border-radius: 14px; background: color-mix(in oklch, var(--bg) 72%, transparent); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); }
+.caption span { margin-block-start: 0.15rem; color: color-mix(in oklch, var(--fg) 80%, var(--bg)); font-size: var(--text-s); font-weight: 600;
+  padding: 0.1rem 0.6rem; border-radius: 999px; background: color-mix(in oklch, var(--bg) 72%, transparent); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); }
+.hint { position: absolute; inset-block-end: 0.5rem; inset-inline: 0; margin: 0; text-align: center; color: var(--muted); font-size: var(--text-xs); font-weight: 600; pointer-events: none; transition: opacity 400ms var(--ease-out); }
+.hint[data-done] { opacity: 0; }
+@container stage (width >= 50rem) { .hint { inset-block: 1.25rem auto; inset-inline: auto 1.25rem; text-align: end; } }
+
+@media (prefers-reduced-motion: no-preference) {
+  .callout > *, .flag > *, .tip > * { transition: scale 200ms var(--ease-out); }
+  :is(.flag, .tip, .callout)[data-show="false"] > * { scale: 0.92; }
+  .caption { transition: opacity 260ms var(--ease-out), translate 360ms var(--ease-out); }
+  .caption:not([data-show="true"]) { translate: 0 -0.4rem; }
+  .bar span { transition: inline-size 280ms var(--ease-out); }
+}
+
+/* ---------- the wave: play, scrub, launches per week ---------- */
+.wave { display: grid; gap: 0.5rem; padding: 0.75rem 0.9rem 0.6rem; border-radius: 22px; border: 1px solid var(--line);
+  background: color-mix(in oklch, var(--panel) 84%, transparent); backdrop-filter: blur(16px) saturate(1.2); -webkit-backdrop-filter: blur(16px) saturate(1.2);
+  box-shadow: var(--shadow-l); }
+.wave-top { display: flex; align-items: center; gap: 0.75rem; }
+.play { display: inline-flex; align-items: center; gap: 0.5rem; min-block-size: 2.75rem; padding-inline: 0.6rem 1.05rem; cursor: pointer;
+  font: inherit; font-weight: 750; color: var(--accent-ink); background: var(--accent); border: 0; border-radius: 999px;
+  box-shadow: 0 1px 0 oklch(1 0 none / 0.35) inset, 0 2px 6px color-mix(in oklch, var(--accent) 40%, transparent); }
+.play .ico { flex: none; display: grid; place-items: center; inline-size: 1.75rem; block-size: 1.75rem; border-radius: 50%; background: color-mix(in oklch, var(--accent-ink) 14%, transparent); }
+.play svg { inline-size: 0.8rem; block-size: 0.8rem; }
+.play .i-pause, .play[data-playing] .i-play { display: none; }
+.play[data-playing] .i-pause { display: block; }
+.play:active { scale: 0.97; }
+.wave-meta { margin-inline-start: auto; display: grid; justify-items: end; line-height: 1.15; }
+.wave-meta h2 { margin: 0; color: var(--muted); font-size: var(--text-xs); font-weight: 700; letter-spacing: 0.02em; }
+.wave-meta output { font-weight: 800; font-size: 1.05rem; font-variant-numeric: tabular-nums; letter-spacing: -0.01em; }
+.track { display: grid; }
+.bars { position: relative; block-size: 2.5rem; margin-inline: 8px; cursor: pointer; }
+.bars::after { content: ""; position: absolute; inset-block: -0.2rem -0.65rem; inset-inline-start: calc(var(--p, 1) * 100% - 1px); inline-size: 2px; border-radius: 2px; background: var(--accent); }
+.hb { position: absolute; inset-block-end: 0; inset-inline-start: calc(var(--x) * 100%); inline-size: max(2px, calc(var(--wd) * 100% - 2px));
+  block-size: max(3px, calc(var(--h) * 100%)); display: flex; flex-direction: column-reverse; border-radius: 3px 3px 1px 1px; overflow: clip; }
+.hb i { flex: var(--n) 1 0; background: var(--c); }
+.hb:not(.on) i { background: color-mix(in oklch, var(--fg) 15%, transparent); }
+#scrub { -webkit-appearance: none; appearance: none; inline-size: 100%; block-size: 1.25rem; margin: 0; background: transparent; cursor: pointer; }
+#scrub::-webkit-slider-runnable-track { block-size: 2px; border-radius: 2px; background: var(--line-strong); }
+#scrub::-moz-range-track { block-size: 2px; border-radius: 2px; background: var(--line-strong); }
+#scrub::-webkit-slider-thumb { -webkit-appearance: none; inline-size: 16px; block-size: 16px; margin-block-start: -7px; border-radius: 50%;
+  background: var(--card); border: 3px solid var(--accent); box-shadow: 0 1px 4px oklch(0.3 0.03 60 / 0.3); }
+#scrub::-moz-range-thumb { inline-size: 10px; block-size: 10px; border-radius: 50%; background: var(--card); border: 3px solid var(--accent); box-shadow: 0 1px 4px oklch(0.3 0.03 60 / 0.3); }
+#scrub:focus-visible { outline-offset: 0; border-radius: 999px; }
+.months { position: relative; block-size: 1rem; margin-inline: 8px; color: var(--muted); font-size: 0.625rem; font-weight: 650; }
+.months span { position: absolute; inset-inline-start: calc(var(--x) * 100%); translate: -50% 0; white-space: nowrap; }
+.months span:first-child { translate: 0 0; }
+@media (prefers-reduced-motion: no-preference) {
+  .play { transition: scale 140ms var(--ease-out), background-color 160ms var(--ease-out); }
+}
+@media (hover: hover) and (pointer: fine) {
+  .play:hover { background: color-mix(in oklch, var(--accent), white 12%); }
+  .callout-in a:hover { background: color-mix(in oklch, var(--accent), white 12%); }
+}
+
+/* ---------- the list panel ---------- */
+.maps { display: flex; flex-direction: column; background: var(--panel); }
+.maps-head { position: sticky; inset-block-start: 0; z-index: 3; display: grid; gap: 0.7rem; padding: 1rem 1rem 0.8rem;
+  background: color-mix(in oklch, var(--panel) 90%, transparent); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); box-shadow: 0 1px 0 var(--line); }
+.maps-title { display: flex; align-items: baseline; gap: 0.5rem; }
+.maps-title h2 { margin: 0; font-size: 1.125rem; letter-spacing: -0.015em; }
+.count { color: var(--muted); font-size: var(--text-s); font-weight: 650; font-variant-numeric: tabular-nums; }
+@media (width >= 60rem) {
+  .maps { position: sticky; inset-block-start: 0.75rem; block-size: calc(100dvh - 1.5rem); margin: 0.75rem; margin-inline-start: 0;
+    border: 1px solid var(--line); border-radius: 24px; box-shadow: var(--shadow-l); overflow: clip; }
+  .maps-head { position: static; border-start-start-radius: inherit; border-start-end-radius: inherit; }
+}
+.search { position: relative; }
+.search svg { position: absolute; inset-inline-start: 0.9rem; inset-block-start: 50%; translate: 0 -50%; inline-size: 1.05rem; block-size: 1.05rem; color: var(--muted); pointer-events: none; }
+.search input { inline-size: 100%; block-size: 2.75rem; padding-inline: 2.55rem 1rem; color: inherit; font: inherit; background: var(--card);
+  border: 1px solid var(--line); border-radius: 999px; box-shadow: var(--shadow-s); }
+.search input::placeholder { color: var(--muted); }
+.search input:focus-visible { outline-offset: 0; }
+.chips { display: flex; flex-wrap: wrap; gap: 0.4rem; }
+.chip { --c: var(--fg); display: inline-flex; align-items: center; gap: 0.4rem; min-block-size: 2.25rem; padding-inline: 0.75rem; cursor: pointer;
+  color: inherit; font: inherit; font-size: var(--text-s); font-weight: 650;
+  background: color-mix(in oklch, var(--c) 9%, var(--card)); border: 1px solid color-mix(in oklch, var(--c) 20%, transparent); border-radius: 999px; }
+.chip i { inline-size: 0.55rem; block-size: 0.55rem; border-radius: 2px; rotate: 45deg; background: var(--c); flex: none; }
+.chip b { font-weight: 750; font-variant-numeric: tabular-nums; color: var(--muted); }
+.chip[aria-pressed="true"] { background: var(--c); color: var(--card); border-color: transparent; }
+.chip[aria-pressed="true"] b { color: inherit; opacity: 0.8; }
+.chip[aria-pressed="true"] i { background: var(--card); }
+
+.list { position: relative; margin: 0; padding: 0.75rem; list-style: none; display: flex; flex-direction: column; gap: 0.55rem; }
+@media (width >= 60rem) { .list { flex: 1; min-block-size: 0; overflow-y: auto; overscroll-behavior: contain; scrollbar-gutter: stable; scrollbar-width: thin; } }
+
+/* a card: soft surface, lifts a little under the mouse, tinted when open (no edge bar) */
+.item { --c: var(--un); position: relative; isolation: isolate; background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); }
+.item::before, .item::after { content: ""; position: absolute; inset: -1px; z-index: -1; border-radius: inherit; pointer-events: none; }
+.item::before { box-shadow: var(--shadow-s); }
+.item::after { box-shadow: var(--shadow-l); opacity: 0; }
+.item:has(details[open]) { background: color-mix(in oklch, var(--c) 8%, var(--card)); border-color: color-mix(in oklch, var(--c) 28%, transparent); }
+.item:has(details[open])::after { opacity: 0.7; }
+.item:has(summary:focus-visible) { outline: max(2px, 0.08em) solid var(--accent); outline-offset: 2px; }
+.item summary { display: grid; grid-template-columns: auto minmax(0, 1fr); grid-template-rows: auto auto; column-gap: 0.8rem; row-gap: 0.1rem; align-items: center;
+  padding: 0.5rem 0.85rem 0.5rem 0.5rem; cursor: pointer; list-style: none; border-radius: inherit; }
+.item summary::-webkit-details-marker { display: none; }
+.item summary:focus-visible { outline: 2px solid transparent; }
+.thumb { grid-row: span 2; flex: none; inline-size: 4rem; block-size: 4rem; border-radius: 11px; object-fit: cover; background: color-mix(in oklch, var(--c) 16%, var(--card));
+  outline: 1px solid color-mix(in oklch, var(--fg) 8%, transparent); outline-offset: -1px; }
+.thumb.ph { display: grid; place-items: center; color: var(--c); }
+.thumb.ph svg { inline-size: 1.9rem; block-size: 1.9rem; }
+.row1 { display: flex; align-items: center; gap: 0.4rem; align-self: end; }
+.row1 .t { font-weight: 700; overflow: clip; text-overflow: ellipsis; white-space: nowrap; }
+.row1 time { margin-inline-start: auto; padding-inline-start: 0.4rem; flex: none; color: var(--muted); font-size: 0.75rem; font-weight: 600; font-variant-numeric: tabular-nums; }
+.sub { align-self: start; color: var(--muted); font-size: var(--text-s); overflow: clip; text-overflow: ellipsis; white-space: nowrap; }
+.kind { display: inline-flex; align-items: center; gap: 0.4rem; }
+.kind::before { content: ""; inline-size: 0.5rem; block-size: 0.5rem; border-radius: 2px; rotate: 45deg; background: var(--c); flex: none; }
+.tag { flex: none; padding: 0.05rem 0.45rem; border-radius: 999px; font-size: 0.6875rem; font-weight: 750; background: var(--accent); color: var(--accent-ink); }
+.tag.soft { background: color-mix(in oklch, var(--fg) 8%, transparent); color: var(--muted); }
+.item details::details-content { block-size: 0; overflow: clip; }
+.item details[open]::details-content { block-size: auto; }
+.more { display: grid; gap: 0.6rem; padding: 0.1rem 0.85rem 0.85rem 5.3rem; }
+.more p { margin: 0; font-size: var(--text-s); line-height: 1.5; }
+.more .how { color: var(--muted); }
+.more .how b { color: color-mix(in oklch, var(--c), var(--fg) 30%); }
+.links { display: flex; flex-wrap: wrap; gap: 0.4rem; }
+.links a { display: inline-flex; align-items: center; min-block-size: 2.4rem; padding-inline: 0.9rem; font-size: var(--text-s); font-weight: 700;
+  color: inherit; text-decoration: none; background: var(--card); border: 1px solid var(--line); border-radius: 999px; }
+.links a.go { background: var(--accent); color: var(--accent-ink); border-color: transparent; }
+.empty { padding: 2rem 1rem; text-align: center; color: var(--muted); }
+@media (width < 24rem) { .more { padding-inline-start: 0.85rem; } }
+
+/* press feedback; hover only where hover exists (good-css: interaction) */
+.chip:active, .links a:active, .item:has(summary:active) { scale: 0.985; }
+@media (prefers-reduced-motion: no-preference) {
+  .chip, .links a, .item { transition: scale 140ms var(--ease-out), translate 220ms var(--ease-out), background-color 180ms var(--ease-out), border-color 180ms var(--ease-out); }
+  .item::before, .item::after { transition: opacity 260ms var(--ease-out); }
+  .item details::details-content { transition: block-size 280ms var(--ease-out), content-visibility 280ms allow-discrete; }
+  .thumb { transition: scale 260ms var(--ease-out); }
+}
+@media (hover: hover) and (pointer: fine) {
+  .chip:not([aria-pressed="true"]):hover { background: color-mix(in oklch, var(--c) 16%, var(--card)); }
+  .item:hover { translate: 0 -1px; border-color: color-mix(in oklch, var(--c) 30%, var(--line)); }
+  .item:hover::before { opacity: 0; }
+  .item:hover::after { opacity: 1; }
+  .item summary:hover .thumb { scale: 1.04; }
+  .links a:not(.go):hover { background: color-mix(in oklch, var(--fg) 6%, var(--card)); }
+  .links a.go:hover { background: color-mix(in oklch, var(--accent), white 12%); }
+}
+
+footer { padding: 0.75rem 1rem; padding-block-end: calc(0.75rem + env(safe-area-inset-bottom, 0px)); font-size: var(--text-xs); color: var(--muted); box-shadow: 0 -1px 0 var(--line); }
+footer a { color: inherit; }
+</style>
+</head>
+<body>
+<div class="shell">
+  <main class="stage">
+    <div class="stage-grid">
+      <header class="hero">
+        <p class="eyebrow"><img src="../app/brand/favicon.svg" alt="" width="22" height="22">A field guide to tiny pixel cities</p>
+        <h1>Isometric <span>Cities Atlas</span></h1>
+        <p class="lede">Real cities redrawn as little SimCity-style worlds, painted by AI or built in code. It started with one map of New York in January. Now there are <b id="lede-n">dozens</b>, all over the world.</p>
+      </header>
+
+      <div class="globe" id="globe">
+        <canvas role="img" aria-label="A spinning globe with a little block on every city that has an isometric map. The list of maps has the same places."></canvas>
+        <div class="flag" data-show="false" aria-hidden="true"><div class="flag-in"><img src="../app/brand/logo-96.webp" alt="" width="22" height="22">Tiny Tirana</div></div>
+        <div class="tip" data-show="false" aria-hidden="true"><div class="tip-in"></div></div>
+        <div class="callout" data-show="false" aria-hidden="true"><div class="callout-in"></div></div>
+        <p class="caption" id="caption" aria-live="polite"></p>
+        <p class="hint" id="hint" aria-hidden="true">Drag to spin · scroll to zoom · tap a block</p>
+      </div>
+
+      <section class="wave" id="wave" data-globe-avoid aria-labelledby="wave-h">
+        <div class="wave-top">
+          <button class="play" id="play" type="button">
+            <span class="ico"><svg class="i-play" viewBox="0 0 12 12" aria-hidden="true"><path d="M3 1.5v9l7.5-4.5z" fill="currentColor"/></svg><svg class="i-pause" viewBox="0 0 12 12" aria-hidden="true"><path d="M2.5 1.5h2.6v9H2.5zM6.9 1.5h2.6v9H6.9z" fill="currentColor"/></svg></span>
+            <span id="play-label">Play the wave</span>
+          </button>
+          <div class="wave-meta"><h2 id="wave-h">The wave</h2><output id="wave-date" for="scrub"></output></div>
+        </div>
+        <div class="track">
+          <div class="bars" id="bars" aria-hidden="true"></div>
+          <input id="scrub" type="range" min="0" max="1" step="any" value="1" aria-label="Show maps launched up to this day">
+        </div>
+        <div class="months" id="months" aria-hidden="true"></div>
+      </section>
+
+      <section class="stats" aria-labelledby="stats-h">
+        <h2 id="stats-h" class="sr">The atlas in numbers</h2>
+        <dl class="nums">
+          <div><dt>maps</dt><dd id="n-maps">–</dd></div>
+          <div><dt>cities</dt><dd id="n-cities">–</dd></div>
+          <div><dt>countries</dt><dd id="n-countries">–</dd></div>
+        </dl>
+        <div class="made">
+          <p class="made-h">How they were made</p>
+          <div class="bar" id="bar" role="img"></div>
+          <ul class="legend" id="legend"></ul>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <aside class="maps" aria-labelledby="maps-h">
+    <div class="maps-head">
+      <div class="maps-title"><h2 id="maps-h">All the maps</h2><span class="count" id="count"></span></div>
+      <div class="search" role="search">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+        <label class="sr" for="q">Search maps</label>
+        <input id="q" type="search" placeholder="Find a city, map or maker" autocomplete="off" enterkeyhint="search">
+      </div>
+      <div class="chips" id="chips" role="group" aria-label="Filter by how the map was made"></div>
+    </div>
+    <ul class="list" id="list"></ul>
+    <footer>Gathered on 6 Nov 2026 from <a href="https://tiny.london/world/">tiny.london/world</a>, isometriccities.com, X, Hacker News, Reddit and GitHub. "How it was made" is our reading of each maker's own notes. Coastlines: Natural Earth. Made alongside <a href="../app/">Tiny Tirana</a>.</footer>
+  </aside>
+</div>
+<script src="vendor/d3-array-3.2.4.min.js"></script>
+<script src="vendor/d3-geo-3.1.1.min.js"></script>
+<script src="vendor/topojson-client-3.1.0.min.js"></script>
+<script type="module" src="atlas.js"></script>
+</body>
+</html>

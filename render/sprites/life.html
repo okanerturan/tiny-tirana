@@ -1,0 +1,190 @@
+<!doctype html><meta charset="utf-8"><body style="margin:0;background:transparent">
+<script type="importmap">{"imports":{"three":"http://sprites.local/three/three.module.js","three/addons/":"http://sprites.local/three-addons/"}}</script>
+<script type="module">
+// "City life" sprites seen from the map camera (heading 315, tilt 45, orthographic): toy cars and the lake's birds.
+// World: x = east, y = up, z = south, metres. Every model faces north (-z) before yaw; frame i = bearing i * 360 / N.
+import * as THREE from 'three';
+import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
+const CAR = { N: 32, CELL: 64, VIEW: 6.4 };                 // 10 px per metre
+const DUCK = { N: 16, CELL: 48, VIEW: 1.9 };                // bird units (scaled at runtime)
+const INK = '#2e2622';
+const CARS = [ // [body, shape]  0 hatchback, 1 sedan, 2 van
+  ['#d8433a', 0], ['#f2c14e', 0], ['#f4f1ea', 1], ['#4f9ad8', 1], ['#6cc3a5', 0], ['#e8823d', 2], ['#34548c', 1], ['#c3c8cf', 2]];
+
+const r = new THREE.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true });
+r.setPixelRatio(1); r.setClearColor(0, 0); r.localClippingEnabled = true;
+const grad = new THREE.DataTexture(new Uint8Array([120, 120, 120, 255, 190, 190, 190, 255, 255, 255, 255, 255]), 3, 1);
+grad.minFilter = grad.magFilter = THREE.NearestFilter; grad.needsUpdate = true;
+const clip = [new THREE.Plane(new THREE.Vector3(0, 1, 0), 0)];
+const toon = (c, clipped) => new THREE.MeshToonMaterial({ color: c, gradientMap: grad, clippingPlanes: clipped ? clip : null });
+const inkMat = clipped => new THREE.MeshBasicMaterial({ color: INK, side: THREE.BackSide, clippingPlanes: clipped ? clip : null });
+function outlined(geo, mat, s) {                            // inverted hull, s world units thick
+  const g = new THREE.Group(); g.add(new THREE.Mesh(geo, mat));
+  if (s > 0) {
+    geo.computeBoundingBox(); const b = geo.boundingBox, sz = new THREE.Vector3(), c = new THREE.Vector3(); b.getSize(sz); b.getCenter(c);
+    const o = new THREE.Mesh(geo, inkMat(!!mat.clippingPlanes));
+    o.scale.set(1 + 2 * s / Math.max(sz.x, .01), 1 + 2 * s / Math.max(sz.y, .01), 1 + 2 * s / Math.max(sz.z, .01));
+    o.position.set(-c.x * (o.scale.x - 1), -c.y * (o.scale.y - 1), -c.z * (o.scale.z - 1)); g.add(o);
+  }
+  return g;
+}
+const at = (obj, x, y, z) => (obj.position.set(x, y, z), obj);
+
+function car(color, shape) {
+  const C = new THREE.Group(), body = toon(color), glass = toon('#3c4b60'), tyre = toon('#2a2a2e'), white = toon('#fbf7ee');
+  const L = shape === 1 ? 4.3 : shape === 2 ? 4.4 : 3.8, W = 1.85, H = shape === 2 ? 0.95 : 0.8;
+  C.add(at(outlined(new RoundedBoxGeometry(W, H, L, 3, 0.28), body, 0.07), 0, 0.3 + H / 2, 0));
+  // cabin: glass box with a body-coloured roof slab; vans are tall and boxy, sedans have a long boot
+  const cl = shape === 2 ? 3.1 : shape === 1 ? 2.2 : 2.1, ch = shape === 2 ? 0.85 : 0.62, cz = shape === 2 ? 0.45 : shape === 1 ? 0.2 : 0.35;
+  C.add(at(outlined(new RoundedBoxGeometry(W - 0.22, ch, cl, 3, 0.2), glass, 0.06), 0, 0.3 + H + ch / 2 - 0.05, cz));
+  C.add(at(outlined(new RoundedBoxGeometry(W - 0.12, 0.16, cl + 0.08, 2, 0.07), shape === 2 ? white : body, 0.05), 0, 0.3 + H + ch - 0.04, cz));
+  for (const sx of [-1, 1]) for (const sz of [-1, 1]) {
+    const w = new THREE.CylinderGeometry(0.36, 0.36, 0.34, 14); w.rotateZ(Math.PI / 2);
+    C.add(at(outlined(w, tyre, 0.04), sx * (W / 2 - 0.12), 0.36, sz * (L / 2 - 0.75)));
+  }
+  for (const sx of [-1, 1]) {
+    C.add(at(new THREE.Mesh(new THREE.BoxGeometry(0.36, 0.18, 0.06), toon('#fff4c2')), sx * 0.58, 0.3 + H * 0.62, -L / 2 - 0.01));
+    C.add(at(new THREE.Mesh(new THREE.BoxGeometry(0.34, 0.16, 0.06), toon('#d23a2e')), sx * 0.6, 0.3 + H * 0.66, L / 2 + 0.01));
+  }
+  return C;
+}
+
+// ---- birds of Tirana Lake: Muscovy ducks (+ ducklings, + waddling on land), coots, little and great crested grebes, mute swans.
+// One model unit ~ body length; the runtime scales each species. Swimmers are clipped at the waterline (y = 0).
+function ell(rx, ry, rz, color, x, y, z, clipped, o = 0.03) {
+  const g = new THREE.SphereGeometry(1, 18, 12); g.scale(rx, ry, rz);
+  return at(outlined(g, toon(color, clipped), o), x, y, z);
+}
+function bill(len, w, color, x, y, z) { const g = new THREE.SphereGeometry(1, 10, 8); g.scale(w, w * 0.45, len); return at(outlined(g, toon(color), 0.018), x, y, z); }
+function eyes(B, r, x, y, z, size = 0.028) { for (const sx of [-1, 1]) B.add(at(new THREE.Mesh(new THREE.SphereGeometry(size, 8, 6), new THREE.MeshBasicMaterial({ color: '#141010' })), sx * x, y, z)); }
+
+function muscovy(walk) {                       // walk: 0 swimming, 1 / 2 two stride poses on land
+  const B = new THREE.Group(), lift = walk ? 0.24 : 0, clip = !walk, black = '#2b2729', white = '#f3f0e8';
+  B.add(ell(0.31, 0.24, 0.5, black, 0, 0.06 + lift, 0, clip, 0.035));
+  for (const sx of [-1, 1]) {                  // big white wing patches + a little mottling
+    B.add(ell(0.05, 0.12, 0.2, white, sx * 0.29, 0.15 + lift, -0.08, clip, 0));
+    B.add(ell(0.04, 0.07, 0.08, white, sx * 0.27, 0.12 + lift, 0.2, clip, 0));
+  }
+  B.add(ell(0.13, 0.09, 0.1, white, 0, 0.12 + lift, -0.42, clip, 0));          // white bib
+  const tail = new THREE.ConeGeometry(0.12, 0.22, 10); tail.rotateX(-Math.PI / 2 - 0.5);
+  B.add(at(outlined(tail, toon(black, clip), 0.03), 0, 0.17 + lift, 0.48));
+  const neck = new THREE.CylinderGeometry(0.1, 0.14, 0.3, 12); B.add(at(new THREE.Mesh(neck, toon(black)), 0, 0.27 + lift, -0.33));
+  B.add(ell(0.17, 0.16, 0.19, black, 0, 0.42 + lift, -0.38, false, 0.03));       // head
+  const crest = new THREE.ConeGeometry(0.06, 0.12, 8); crest.rotateX(0.9); B.add(at(new THREE.Mesh(crest, toon(black)), 0, 0.56 + lift, -0.32));
+  for (const sx of [-1, 1]) B.add(ell(0.06, 0.08, 0.1, '#d42e26', sx * 0.11, 0.43 + lift, -0.47, false, 0));   // bare red warty face
+  B.add(bill(0.12, 0.075, '#e0564a', 0, 0.39 + lift, -0.6));
+  eyes(B, 0.15, 0.14, 0.46 + lift, -0.45);
+  if (walk) for (const sx of [-1, 1]) {        // legs mid-stride
+    const step = (walk === 1 ? 1 : -1) * sx * 0.09;
+    const leg = new THREE.CylinderGeometry(0.03, 0.03, 0.24, 6); B.add(at(new THREE.Mesh(leg, toon('#c4993e')), sx * 0.12, 0.12, step));
+    B.add(at(outlined(new THREE.BoxGeometry(0.12, 0.03, 0.14), toon('#c4993e'), 0.015), sx * 0.12, 0.015, step - 0.05));
+  }
+  return B;
+}
+function duckling() {                          // dark with yellow patches
+  const B = new THREE.Group();
+  B.add(ell(0.3, 0.26, 0.36, '#3b3026', 0, 0.06, 0, true, 0.035));
+  for (const sx of [-1, 1]) B.add(ell(0.05, 0.1, 0.12, '#f1cf55', sx * 0.27, 0.15, 0.05, true, 0));
+  B.add(ell(0.22, 0.2, 0.2, '#3b3026', 0, 0.36, -0.27, false, 0.035));
+  B.add(ell(0.16, 0.1, 0.12, '#f1cf55', 0, 0.3, -0.36, false, 0));                 // yellow face/throat
+  B.add(bill(0.08, 0.06, '#59493a', 0, 0.33, -0.48)); eyes(B, 0, 0.15, 0.4, -0.38, 0.035);
+  return B;
+}
+function coot() {                              // all black, white bill and forehead shield
+  const B = new THREE.Group(), black = '#232224';
+  B.add(ell(0.32, 0.27, 0.44, black, 0, 0.07, 0.02, true, 0.035));
+  const tail = new THREE.ConeGeometry(0.09, 0.14, 8); tail.rotateX(-Math.PI / 2 - 0.6); B.add(at(outlined(tail, toon(black, true), 0.03), 0, 0.18, 0.42));
+  B.add(ell(0.16, 0.16, 0.17, black, 0, 0.36, -0.33, false, 0.03));
+  B.add(ell(0.06, 0.09, 0.05, '#f6f3ec', 0, 0.43, -0.45, false, 0.015));          // shield
+  B.add(bill(0.09, 0.06, '#f6f3ec', 0, 0.33, -0.5)); eyes(B, 0, 0.1, 0.39, -0.42, 0.03);
+  return B;
+}
+function littleGrebe() {                       // small, round, dark brown, chestnut neck, pale spot at the bill base
+  const B = new THREE.Group();
+  B.add(ell(0.3, 0.25, 0.36, '#4a3a2d', 0, 0.06, 0.03, true, 0.035));
+  B.add(ell(0.2, 0.16, 0.18, '#d7c3a0', 0, 0.12, 0.32, true, 0));                  // fluffy pale rear
+  B.add(ell(0.15, 0.17, 0.15, '#9b4428', 0, 0.26, -0.24, false, 0.03));             // chestnut neck
+  B.add(ell(0.15, 0.14, 0.16, '#3a2d24', 0, 0.38, -0.29, false, 0.03));
+  B.add(ell(0.05, 0.04, 0.04, '#f0e59a', 0, 0.36, -0.42, false, 0));
+  B.add(bill(0.08, 0.04, '#26201c', 0, 0.36, -0.47)); eyes(B, 0, 0.1, 0.41, -0.38, 0.028);
+  return B;
+}
+function crestedGrebe() {                      // grey-brown back, white neck and face, orange-and-black head plumes, pink bill
+  const B = new THREE.Group();
+  B.add(ell(0.27, 0.2, 0.5, '#7b6c5f', 0, 0.05, 0.05, true, 0.035));
+  B.add(ell(0.18, 0.12, 0.3, '#f2eee6', 0, 0.1, -0.15, true, 0));                   // white flank/breast
+  const neck = new THREE.CylinderGeometry(0.08, 0.12, 0.45, 12); neck.rotateX(-0.25); B.add(at(outlined(neck, toon('#f2eee6'), 0.025), 0, 0.3, -0.36));
+  B.add(ell(0.12, 0.12, 0.15, '#f2eee6', 0, 0.55, -0.45, false, 0.025));
+  for (const sx of [-1, 1]) B.add(ell(0.05, 0.1, 0.09, '#c4652c', sx * 0.11, 0.52, -0.43, false, 0));   // ruff
+  const crest = new THREE.ConeGeometry(0.05, 0.14, 8); crest.rotateX(0.6);
+  for (const sx of [-1, 1]) B.add(at(new THREE.Mesh(crest, toon('#1e1a18')), sx * 0.05, 0.67, -0.4));
+  B.add(bill(0.13, 0.04, '#d98b86', 0, 0.54, -0.63)); eyes(B, 0, 0.08, 0.58, -0.52, 0.026);
+  return B;
+}
+function swan() {                              // white, S neck, orange bill with a black knob
+  const B = new THREE.Group(), white = '#fbf9f3';
+  B.add(ell(0.36, 0.26, 0.56, white, 0, 0.08, 0.06, true, 0.035));
+  for (const sx of [-1, 1]) B.add(ell(0.14, 0.14, 0.34, '#ece8de', sx * 0.2, 0.25, 0.12, true, 0.02));   // raised wings
+  const curve = new THREE.CatmullRomCurve3([new THREE.Vector3(0, 0.2, -0.3), new THREE.Vector3(0, 0.45, -0.42), new THREE.Vector3(0, 0.72, -0.36), new THREE.Vector3(0, 0.8, -0.46)]);
+  B.add(outlined(new THREE.TubeGeometry(curve, 16, 0.065, 8), toon(white), 0.025));
+  B.add(ell(0.09, 0.08, 0.13, white, 0, 0.8, -0.5, false, 0.025));
+  B.add(bill(0.1, 0.04, '#ec7d2a', 0, 0.77, -0.64));
+  B.add(ell(0.035, 0.04, 0.035, '#1a1614', 0, 0.82, -0.57, false, 0)); eyes(B, 0, 0.07, 0.83, -0.53, 0.022);
+  return B;
+}
+const BIRDS = [muscovy(0), duckling(), coot(), littleGrebe(), crestedGrebe(), swan(), muscovy(1), muscovy(2)];
+
+const scene = new THREE.Scene();
+scene.add(new THREE.HemisphereLight('#ffffff', '#8a7a6a', 1.7));
+const sun = new THREE.DirectionalLight('#fff3df', 2.3); sun.position.set(30, 60, 20); scene.add(sun);
+function camera(view) {
+  const cam = new THREE.OrthographicCamera(-view / 2, view / 2, view / 2, -view / 2, 0.1, 500);
+  const h = 315 * Math.PI / 180, t = 45 * Math.PI / 180;
+  const dir = new THREE.Vector3(Math.sin(h) * Math.cos(t), -Math.sin(t), -Math.cos(h) * Math.cos(t));
+  cam.position.copy(dir.clone().multiplyScalar(-200)); cam.up.set(0, 1, 0); cam.lookAt(0, 0, 0); return cam;
+}
+// 1-px dark silhouette outline (so tiny sprites still read on a busy painting), then a soft contact shadow under it
+function finish(ctx, x, y, cell, shadow) {
+  const img = ctx.getImageData(x, y, cell, cell), a = img.data, src = new Uint8ClampedArray(a);
+  const ink = [0x2e, 0x26, 0x22];
+  for (let j = 0; j < cell; j++) for (let i = 0; i < cell; i++) {
+    const k = (j * cell + i) * 4; if (src[k + 3] > 100) continue;
+    let m = 0;
+    for (const [di, dj] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { const ii = i + di, jj = j + dj;
+      if (ii >= 0 && jj >= 0 && ii < cell && jj < cell) m = Math.max(m, src[(jj * cell + ii) * 4 + 3]); }
+    if (m > 100) { const al = Math.max(src[k + 3], 230); for (let c = 0; c < 3; c++) a[k + c] = (ink[c] * al + src[k + c] * (255 - al)) / 255 | 0; a[k + 3] = al; }
+  }
+  ctx.putImageData(img, x, y);
+  if (shadow) { ctx.save(); ctx.globalCompositeOperation = 'destination-over'; ctx.drawImage(shadow, x, y); ctx.restore(); }
+}
+function shadowOf(group, cam, cell) {                        // render the footprint flattened and darkened, blurred
+  const flat = group.clone(); flat.scale.set(1.08, 0.001, 1.08); flat.position.y = 0.002;
+  const black = new THREE.MeshBasicMaterial({ color: '#000' });
+  flat.traverse(o => { if (o.isMesh) o.material = black; });
+  const s = new THREE.Scene(); s.add(flat); r.render(s, cam);
+  const c = document.createElement('canvas'); c.width = c.height = cell; const x = c.getContext('2d');
+  x.filter = `blur(${cell / 40}px)`; x.globalAlpha = 0.38; x.drawImage(r.domElement, cell * 0.03, cell * 0.04); return c;
+}
+
+// ?sheet=birds (default) or ?sheet=cars: two separate sheets, so the page can load the cars only when they are on.
+const withCars = new URLSearchParams(location.search).get('sheet') === 'cars';
+const carRows = withCars ? CARS.length : 0, duckRows = withCars ? 0 : BIRDS.length;
+const sheet = document.createElement('canvas');
+sheet.width = Math.max(withCars ? CAR.N * CAR.CELL : 0, DUCK.N * DUCK.CELL); sheet.height = carRows * CAR.CELL + duckRows * DUCK.CELL;
+const sx = sheet.getContext('2d', { willReadFrequently: true });
+function bake(model, spec, row, y0, withShadow) {
+  const cam = camera(spec.VIEW); r.setSize(spec.CELL, spec.CELL);
+  for (let i = 0; i < spec.N; i++) {
+    model.rotation.y = -i * 2 * Math.PI / spec.N;
+    const sh = withShadow ? shadowOf(model, cam, spec.CELL) : null;
+    scene.add(model); r.render(scene, cam); scene.remove(model);
+    const x = i * spec.CELL, y = y0 + row * spec.CELL;
+    sx.drawImage(r.domElement, x, y); finish(sx, x, y, spec.CELL, sh);
+  }
+}
+if (withCars) CARS.forEach(([c, s], row) => bake(car(c, s), CAR, row, 0, true));
+BIRDS.forEach((d, row) => bake(d, DUCK, row, carRows * CAR.CELL, false));
+window.__sheet = sheet.toDataURL('image/png');
+window.__meta = withCars ? { car: { ...CAR, rows: carRows, y0: 0 } } : { bird: { ...DUCK, rows: duckRows, y0: 0,
+  species: ['muscovy', 'duckling', 'coot', 'littleGrebe', 'crestedGrebe', 'swan', 'muscovyWalkA', 'muscovyWalkB'] } };
+</script>

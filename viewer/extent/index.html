@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" href="data:,">
+<title>Painted Area</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<style>
+  :root { color-scheme: light dark; --panel: light-dark(oklch(0.99 0 none / 0.94), oklch(0.22 0.01 250 / 0.94)); --fg: light-dark(oklch(0.24 0.01 250), oklch(0.95 0 none)); --muted: light-dark(oklch(0.48 0.01 250), oklch(0.74 0.01 250)); }
+  html, body { margin: 0; block-size: 100%; font: 14px/1.45 system-ui, sans-serif; color: var(--fg); background: oklch(0.95 0 none); }
+  #map { position: fixed; inset: 0; }
+  .info { position: fixed; z-index: 1000; inset-block-start: 12px; inset-inline-start: 56px; max-inline-size: min(24rem, calc(100vw - 80px)); padding: 0.8rem 0.95rem;
+    background: var(--panel); border-radius: 12px; box-shadow: 0 4px 18px oklch(0 0 none / 0.2); }
+  .info h1 { margin: 0 0 0.4rem; font-size: 1rem; }
+  .info p { margin: 0.3rem 0; color: var(--muted); }
+  .info b { color: var(--fg); font-variant-numeric: tabular-nums; }
+  .sw { display: inline-block; inline-size: 0.9em; block-size: 0.9em; margin-inline-end: 0.4em; vertical-align: -0.1em; border-radius: 3px; }
+  .info .h { margin-block-start: 0.6rem; margin-block-end: 0.15rem; font-size: 0.75rem; font-weight: 650; letter-spacing: 0.04em; text-transform: uppercase; color: var(--fg); }
+  .note { margin-block-start: 0.5rem; padding-block-start: 0.5rem; border-block-start: 1px solid color-mix(in oklch, var(--muted) 30%, transparent); }
+</style>
+</head>
+<body>
+<div id="map"></div>
+<div class="info">
+  <h1>Tiny Tirana: what is built</h1>
+  <p class="h">Built</p>
+  <p><span class="sw" style="background:oklch(0.72 0.15 65)"></span>City painting: <b id="aCity"></b></p>
+  <p><span class="sw" style="background:oklch(0.62 0.17 250)"></span>Airport island (Rinas): <b id="aAir"></b></p>
+  <p class="h">Being painted now</p>
+  <p><span class="sw" style="background:oklch(0.65 0.18 145)"></span>Corridor, done: <b id="cDone"></b> · <span class="sw" style="border:2px dashed oklch(0.55 0.18 145);background:none"></span>to go: <b id="cTodo"></b></p>
+  <p class="h">Tirana shape (for the cloud map)</p>
+  <p><span class="sw" style="border:2px solid oklch(0.5 0.2 295);background:none"></span>Option A: the 11 urban units, <b id="aUnits"></b>. <b>100% painted.</b></p>
+  <p><span class="sw" style="background:oklch(0.72 0.15 65)"></span>Option B: everything painted (orange + green + blue), with a softened coastline.</p>
+  <p class="h">Missing</p>
+  <p>Nothing inside Tirana's outline. Outside it, only the empty corners of the rectangle, which the clouds would cover.</p>
+</div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script type="module">
+import { makeProjection } from '../app/proj.js';
+const P = makeProjection({ lat: 41.3275, lon: 19.8187, groundH: 155, heading: 315, tilt: 45, mpp: 300 / 2048 });
+const UP = 146 - 155;                                       // the app's ground level, metres above the anchor
+const KM2 = (300 / 2048) ** 2 * Math.SQRT2 / 1e6;           // one camera px on the ground (tilt 45: v stretched by sqrt 2)
+const F = await (await fetch('footprint.json')).json();
+const map = L.map('map', { zoomControl: true }).setView([41.33, 19.82], 12);
+L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '© OpenStreetMap contributors' }).addTo(map);
+const rect = ([u, v, w, h]) => [[u, v], [u + w, v], [u + w, v + h], [u, v + h]].map(([a, b]) => P.toLatLon(a, b, UP));
+const area = rs => rs.reduce((s, [, , w, h]) => s + w * h, 0) * KM2;
+const layer = (rs, color, op) => L.polygon(rs.map(rect), { stroke: false, fillColor: color, fillOpacity: op }).addTo(map);
+const city = layer(F.city, 'oklch(0.72 0.15 65)', 0.45), air = layer(F.airport, 'oklch(0.62 0.17 250)', 0.45);
+const cd = F.corridor.filter(c => c[4] === 'done'), ct = F.corridor.filter(c => c[4] !== 'done');
+L.polygon(cd.map(rect), { stroke: false, fillColor: 'oklch(0.65 0.18 145)', fillOpacity: 0.5 }).addTo(map);
+for (const c of ct) L.polygon(rect(c), { color: 'oklch(0.55 0.18 145)', weight: 2, dashArray: '6 5', fillColor: 'oklch(0.65 0.18 145)', fillOpacity: c[4] === 'painting' ? 0.22 : 0.06 })
+  .bindTooltip(c[4] === 'painting' ? 'painting now' : 'queued').addTo(map);
+
+// urban units: geodesic area on a local plane
+const R = 6371008, c0 = Math.cos(41.33 * Math.PI / 180);
+const geoA = pts => { let A = 0; for (let i = 0; i < pts.length; i++) { const [a, b] = pts[i], [c, d] = pts[(i + 1) % pts.length];
+  A += (b * c0 * a - d * c0 * c) * 0 + (b * Math.PI / 180 * R * c0) * (c * Math.PI / 180 * R) - (d * Math.PI / 180 * R * c0) * (a * Math.PI / 180 * R); } return Math.abs(A) / 2 / 1e6; };
+let unitsA = 0;
+for (const [name, pts] of Object.entries(F.units)) { unitsA += geoA(pts); L.polygon(pts, { color: 'oklch(0.5 0.2 295)', weight: 2, fill: false }).bindTooltip(name.replace('Njësia Bashkiake', 'Unit')).addTo(map); }
+const fmt = x => `${x.toFixed(x < 10 ? 1 : 0)} km²`;
+document.getElementById('aCity').textContent = fmt(area(F.city));
+document.getElementById('aUnits').textContent = fmt(unitsA);
+document.getElementById('aAir').textContent = fmt(area(F.airport));
+document.getElementById('cDone').textContent = `${cd.length} of ${F.corridor.length} blocks`; document.getElementById('cTodo').textContent = `${ct.length} (≈ 10 min each)`;
+map.fitBounds(L.featureGroup([city, air]).getBounds(), { padding: [24, 24] });
+</script>
+</body>
+</html>

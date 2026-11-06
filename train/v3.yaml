@@ -1,0 +1,68 @@
+# v3 LoRA: Qwen-Image-2.1-Turbo edit mode, teacher = GPT Image 2.5 Sunburst + FLUX style ref (auto-QA'd pairs).
+# Same arch/settings as the v2 run that produced s1000 (TiranaMap/workspace/tirana_v2_probe/cfg.yaml), except:
+# init from s1000, new dataset only, 2000 steps, checkpoint + held-out samples every 250 steps.
+job: extension
+config:
+  name: tiranaiso_v3
+  process:
+  - type: sd_trainer
+    training_folder: /content/output
+    device: cuda:0
+    trigger_word: tiranaiso
+    network:
+      type: lora
+      linear: 32
+      linear_alpha: 32
+      pretrained_lora_path: /content/s1000.safetensors
+    save:
+      dtype: bf16
+      save_every: 250
+      max_step_saves_to_keep: 12
+    datasets:
+    - folder_path: /content/pairs_v3/target
+      control_path: /content/pairs_v3/control
+      caption_ext: txt
+      caption_dropout_rate: 0.05
+      resolution: [1024]
+      cache_latents_to_disk: true
+    train:
+      batch_size: 1
+      steps: 2000
+      gradient_accumulation: 1
+      train_unet: true
+      train_text_encoder: false
+      gradient_checkpointing: true
+      noise_scheduler: flowmatch
+      timestep_type: shift
+      optimizer: adamw8bit
+      lr: 0.0001
+      dtype: bf16
+      cache_text_embeddings: true
+      skip_first_sample: false
+    model:
+      arch: qwen_image_2
+      name_or_path: Comfy-Org/Qwen-Image-2.1/diffusion_models/qwen_image_2.1_turbo_bf16.safetensors
+      model_kwargs:
+        turbo: true
+        rgba: false
+      assistant_lora_path: ostris/qwen_image_2_turbo_training_adapter/qwen_image_2_turbo_training_adapter_v1.safetensors
+      quantize: false
+      quantize_te: false
+    sample:
+      sampler: flowmatch
+      sample_every: 250
+      width: 1024
+      height: 1024
+      guidance_scale: 1.0
+      sample_steps: 8
+      seed: 42
+      walk_seed: false
+      samples:
+      - prompt: tiranaiso, convert this Google 3D isometric render of Tirana into the tiranaiso illustrated isometric pixel-art map style, keep geometry exact
+        ctrl_img: /content/heldout/mother_teresa_sq.png
+      - prompt: tiranaiso, convert this Google 3D isometric render of Tirana into the tiranaiso illustrated isometric pixel-art map style, keep geometry exact
+        ctrl_img: /content/heldout/lake_dam.png
+      - prompt: tiranaiso, convert this Google 3D isometric render of Tirana into the tiranaiso illustrated isometric pixel-art map style, keep geometry exact
+        ctrl_img: /content/heldout/air_albania.png
+      - prompt: tiranaiso, convert this Google 3D isometric render of Tirana into the tiranaiso illustrated isometric pixel-art map style, keep geometry exact
+        ctrl_img: /content/heldout/resid_holdout.png

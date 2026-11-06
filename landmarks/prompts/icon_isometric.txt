@@ -1,0 +1,4 @@
+Image 1 is a crop of an isometric pixel-art painted map of Tirana. Image 2 is a real photo of [LANDMARK] for reference only.
+Cut out [LANDMARK] from image 1 as a single standalone map icon: the building (or feature) itself with only a small piece of its own ground or plinth underneath, nothing else around it.
+Keep EXACTLY the look of image 1: the same isometric camera angle (seen from above at 45 degrees, from the south-east), the same painted pixel-art style, the same colours, outlines and shading. Its signature features must be visible: [FEATURES] Use image 2 only to get the shapes and colours of the landmark right; do not copy the photo's camera angle or realism.
+Centred, filling about 80 % of the frame, on a fully transparent background. No text, no labels, no frame, no shadow box.

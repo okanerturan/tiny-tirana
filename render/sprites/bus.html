@@ -1,0 +1,92 @@
+<!doctype html><meta charset="utf-8"><body style="margin:0;background:transparent">
+<script type="importmap">{"imports":{"three":"http://sprites.local/three/three.module.js","three/addons/":"http://sprites.local/addons/"}}</script>
+<script type="module">
+import * as THREE from 'three';
+import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
+// Chunky toy city bus. World: x = east, y = up, z = south, 1 unit ~ 1 m. Nose along -z (north) before yaw.
+// Row 0: the bus with a white livery (shaded). Row 1: a mask of the livery (white, alpha = coverage) that the viewer
+// tints with the route colour and multiplies over row 0, so one sheet serves every line.
+const N = 32, CELL = 112, VIEW = 14;                     // headings, px per frame, world units across a frame
+const r = new THREE.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true });
+r.setPixelRatio(1); r.setSize(CELL, CELL); r.setClearColor(0, 0);
+const scene = new THREE.Scene();
+const grad = new THREE.DataTexture(new Uint8Array([120, 120, 120, 255, 196, 196, 196, 255, 255, 255, 255, 255]), 3, 1);
+grad.minFilter = grad.magFilter = THREE.NearestFilter; grad.needsUpdate = true;
+const toon = c => new THREE.MeshToonMaterial({ color: c, gradientMap: grad });
+const INK = '#3b2e27', ink = new THREE.MeshBasicMaterial({ color: INK, side: THREE.BackSide });
+const parts = [];                                           // [mesh, kind] kind: body | livery | ink | shadow
+function add(parent, geo, mat, kind = 'body', outline = 0.13) {
+  const m = new THREE.Mesh(geo, mat); parent.add(m); parts.push([m, kind]);
+  if (outline) {                                            // inverted hull, scaled about the geometry's centre
+    geo.computeBoundingBox(); const b = geo.boundingBox, sz = new THREE.Vector3(), c = new THREE.Vector3(); b.getSize(sz); b.getCenter(c);
+    const o = new THREE.Mesh(geo, ink); const s = v => 1 + 2 * outline / Math.max(v, 0.01);
+    o.scale.set(s(sz.x), s(sz.y), s(sz.z)); o.position.set(-c.x * (o.scale.x - 1), -c.y * (o.scale.y - 1), -c.z * (o.scale.z - 1));
+    m.add(o); parts.push([o, 'ink']);
+  }
+  return m;
+}
+const box = (w, h, l, rad = 0.3, seg = 3) => new RoundedBoxGeometry(w, h, l, seg, rad);
+
+function bus() {
+  const B = new THREE.Group();
+  const W = 3.1, L = 8.4, cream = toon('#fbf4e4'), glass = toon('#46607a'), dark = toon('#3a3f48'), white = toon('#ffffff');
+  // lower body + roof in the route colour, cream belt line, glass band with cream pillars in between
+  add(B, box(W, 1.7, L, 0.5), white, 'livery', 0.16).position.set(0, 1.35, 0);
+  add(B, box(W + 0.03, 0.2, L + 0.03, 0.1, 1), cream, 'body', 0).position.set(0, 2.15, 0);
+  add(B, box(W - 0.14, 1.4, L - 0.3, 0.3), glass, 'body', 0).position.set(0, 2.85, 0);
+  for (const z of [-2.35, -0.6, 1.15, 2.85]) add(B, box(W + 0.01, 1.4, 0.34, 0.1, 1), cream, 'body', 0).position.set(0, 2.85, z);
+  add(B, box(W, 0.62, L, 0.3), white, 'livery', 0.16).position.set(0, 3.78, 0);
+  add(B, box(1.8, 0.4, 2.2, 0.18), cream, 'body', 0.1).position.set(0, 4.22, 0.9);                          // roof AC pod
+  // front: big windscreen, amber destination sign, round headlights, bumpers
+  add(B, box(W - 0.4, 1.25, 0.12, 0.05, 1), toon('#9cc4dc'), 'body', 0).position.set(0, 2.8, -L / 2 - 0.02);
+  add(B, box(1.9, 0.36, 0.14, 0.05, 1), toon('#ffb23e'), 'body', 0).position.set(0, 3.68, -L / 2 - 0.04);
+  for (const x of [-1.0, 1.0]) add(B, new THREE.SphereGeometry(0.3, 12, 8), toon('#fff6c8'), 'body', 0).position.set(x, 1.15, -L / 2 - 0.04);
+  add(B, box(W + 0.1, 0.38, 0.45, 0.14, 1), dark, 'body', 0.1).position.set(0, 0.6, -L / 2 + 0.05);
+  add(B, box(W + 0.1, 0.38, 0.45, 0.14, 1), dark, 'body', 0.1).position.set(0, 0.6, L / 2 - 0.05);
+  add(B, box(W - 0.6, 0.9, 0.1, 0.05, 1), toon('#46607a'), 'body', 0).position.set(0, 2.85, L / 2 + 0.02);  // rear window
+  for (const x of [-1.0, 1.0]) add(B, box(0.4, 0.26, 0.1, 0.05, 1), toon('#e2483d'), 'body', 0).position.set(x, 1.35, L / 2 + 0.03);    // tail lights
+  // doors on the right side (+x)
+  for (const z of [-2.95, 0.3]) add(B, box(0.06, 2.3, 1.05, 0.03, 1), toon('#cfd8df'), 'body', 0).position.set(W / 2 + 0.02, 1.95, z);
+  // big chunky wheels
+  const wheel = new THREE.CylinderGeometry(0.78, 0.78, 0.55, 20); wheel.rotateZ(Math.PI / 2);
+  const hub = new THREE.CylinderGeometry(0.32, 0.32, 0.6, 12); hub.rotateZ(Math.PI / 2);
+  for (const x of [-W / 2 + 0.2, W / 2 - 0.2]) for (const z of [-L / 2 + 1.7, L / 2 - 1.75]) {
+    add(B, wheel, toon('#2c2c30'), 'body', 0.1).position.set(x, 0.78, z);
+    add(B, hub, toon('#d6d6d6'), 'body', 0).position.set(x + Math.sign(x) * 0.01, 0.78, z);
+  }
+  return B;
+}
+
+// soft contact shadow (base pass only)
+const sc = document.createElement('canvas'); sc.width = sc.height = 64; const g2 = sc.getContext('2d');
+const rg = g2.createRadialGradient(32, 32, 4, 32, 32, 32); rg.addColorStop(0, 'rgba(40,30,25,0.55)'); rg.addColorStop(0.6, 'rgba(40,30,25,0.3)'); rg.addColorStop(1, 'rgba(40,30,25,0)');
+g2.fillStyle = rg; g2.fillRect(0, 0, 64, 64);
+const shadow = new THREE.Mesh(new THREE.PlaneGeometry(4.8, 10.4), new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(sc), transparent: true, depthWrite: false }));
+shadow.rotation.x = -Math.PI / 2; shadow.position.set(0.25, 0.02, 0.2); parts.push([shadow, 'shadow']);
+
+scene.add(new THREE.HemisphereLight('#ffffff', '#8a7a6a', 1.7));
+const sun = new THREE.DirectionalLight('#fff3df', 2.3); sun.position.set(-30, 60, -10); scene.add(sun);
+// The map camera: looking toward heading 315 (NW), tilted 45 degrees down. The bus's ground centre = the cell centre.
+const cam = new THREE.OrthographicCamera(-VIEW / 2, VIEW / 2, VIEW / 2, -VIEW / 2, 0.1, 500);
+const h = 315 * Math.PI / 180, t = 45 * Math.PI / 180;
+const dir = new THREE.Vector3(Math.sin(h) * Math.cos(t), -Math.sin(t), -Math.cos(h) * Math.cos(t));
+cam.position.copy(dir.clone().multiplyScalar(-200)); cam.up.set(0, 1, 0); cam.lookAt(0, 0, 0);
+
+const P = bus(); const holder = new THREE.Group(); holder.add(P, shadow); scene.add(holder);
+const mats = new Map(parts.map(([m]) => [m, m.material]));
+const black = new THREE.MeshBasicMaterial({ color: 0x000000 }), whiteB = new THREE.MeshBasicMaterial({ color: 0xffffff });
+const blackInk = new THREE.MeshBasicMaterial({ color: 0x000000, side: THREE.BackSide });
+const sheet = document.createElement('canvas'); sheet.width = N * CELL; sheet.height = 2 * CELL; const sx = sheet.getContext('2d', { willReadFrequently: true });
+for (let row = 0; row < 2; row++) {
+  for (const [m, kind] of parts) {
+    if (row === 0) { m.material = mats.get(m); m.visible = true; }
+    else { m.visible = kind !== 'shadow'; m.material = kind === 'livery' ? whiteB : kind === 'ink' ? blackInk : black; }
+  }
+  for (let i = 0; i < N; i++) { holder.rotation.y = -i * 2 * Math.PI / N; r.render(scene, cam); sx.drawImage(r.domElement, i * CELL, row * CELL); }
+}
+// mask row: white, alpha = livery coverage
+const id = sx.getImageData(0, CELL, N * CELL, CELL), d = id.data;
+for (let i = 0; i < d.length; i += 4) { const a = d[i] * d[i + 3] / 255; d[i] = d[i + 1] = d[i + 2] = 255; d[i + 3] = a; }
+sx.putImageData(id, 0, CELL);
+window.__sheet = sheet.toDataURL('image/png'); window.__meta = { N, CELL, VIEW, length: 8.4 + 0.2 };
+</script>
