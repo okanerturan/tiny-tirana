@@ -41,6 +41,8 @@
   -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; -webkit-text-size-adjust: 100%; -webkit-tap-highlight-color: transparent;
 }
 body { margin: 0; }
+.shell { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }   /* a map: nothing to select or copy */
+.shell input, .shell textarea { -webkit-user-select: text; user-select: text; }
 h1, h2, h3 { text-wrap: balance; }
 img, svg { display: block; max-width: 100%; height: auto; }
 input { font-size: max(16px, 1rem); }
@@ -262,14 +264,14 @@ body.hide-lm .lm, body.hide-lm .mm-dot { display: none !important; }   /* OSD se
   .facts div { padding: 0.4rem 0.7rem; }
   .card-actions .btn { min-block-size: 2.5rem; }
 }
-.credit { position: absolute; z-index: 2; inset-block-start: 0.7rem; inset-inline-start: 0.7rem; max-inline-size: calc(100% - 1.4rem); margin: 0;
+.credit { position: absolute; z-index: 2; inset-block-start: 0.7rem; inset-inline-start: 0.7rem; max-inline-size: calc(100% - 7.2rem); margin: 0;   /* clear of the stamp */
   padding: 0.2rem 0.6rem; font-size: 0.6875rem; color: oklch(0.97 0 none); background: oklch(0.15 0.01 250 / 0.55); border-radius: 999px;
   backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); opacity: 0; }
 .credit a { color: inherit; }
 .stage[data-show="photo"] .credit.photo, .stage[data-show="diorama"] .credit.diorama,
 .stage[data-show="poster"] .credit.poster, .stage[data-show="map"] .credit.map { opacity: 1; }
 @media (prefers-reduced-motion: no-preference) { .credit { transition: opacity 200ms var(--ease-out); } }
-.stamp { position: absolute; z-index: 2; inset-inline-end: 0.9rem; inset-block-end: 0.8rem; inline-size: 5rem; rotate: 5deg;
+.stamp { position: absolute; z-index: 2; inset-inline-end: 0.9rem; inset-block-start: 0.8rem; inline-size: 5rem; rotate: 5deg;   /* top: the view tabs run along the bottom */
   background: oklch(0.99 0.005 85); border-radius: 6px; box-shadow: 0 4px 12px oklch(0 0 none / 0.3); padding: 7px;
   -webkit-mask: radial-gradient(circle, transparent 2.8px, #000 3.2px) -4px -4px / 8px 8px round, linear-gradient(#000 0 0) content-box;
   mask: radial-gradient(circle, transparent 2.8px, #000 3.2px) -4px -4px / 8px 8px round, linear-gradient(#000 0 0) content-box; }
@@ -487,9 +489,60 @@ body:has(.bus-lines:popover-open) .minimap { opacity: 0; pointer-events: none; }
 /* --- map pin and toast --- */
 .pin { inline-size: 18px; block-size: 18px; margin: -9px 0 0 -9px; border-radius: 50%; background: var(--accent); border: 3px solid white; box-shadow: 0 0 0 4px oklch(0.72 0.15 65 / 0.35), var(--shadow); }
 .pin span { position: absolute; inset-block-end: 150%; inset-inline-start: 50%; translate: -50% 0; padding: 0.2rem 0.5rem; white-space: nowrap; font-size: var(--text-s); font-weight: 600; color: var(--fg); background: var(--panel-solid); border-radius: 6px; box-shadow: var(--shadow); }
-.toast { position: absolute; z-index: 3; inset-inline-start: 50%; inset-block-end: calc(2.5rem + env(safe-area-inset-bottom, 0px)); translate: -50% 0; padding: 0.55rem 0.9rem; border-radius: 999px; background: var(--panel-solid); box-shadow: var(--shadow); }
+.toast { position: absolute; z-index: 6; inset-inline-start: 50%; inset-block-start: calc(4.75rem + env(safe-area-inset-top, 0px)); translate: -50% 0; padding: 0.55rem 0.9rem; border-radius: 999px; background: var(--panel-solid); box-shadow: var(--shadow); }
 .toast[hidden] { display: none; }
+@media (width < 40rem) { .toast { inset-block-start: calc(11rem + env(safe-area-inset-top, 0px)); } }   /* below the bar and the strip */
 .sr { position: absolute; inline-size: 1px; block-size: 1px; overflow: clip; clip-path: inset(50%); white-space: nowrap; }
+
+/* landmark strip (app.js buildStrip): a native scroll row between two arrow buttons (good-css: carousel on native scroll;
+   edges fade only on the side that still has pills, via a scroll timeline). Bottom centre on desktop, icons under the
+   search bar on phones. */
+@property --fade-start { syntax: "<length>"; inherits: false; initial-value: 0px; }
+@property --fade-end { syntax: "<length>"; inherits: false; initial-value: 0px; }
+@keyframes lm-edges { from { --fade-start: 0px; --fade-end: 1.75rem; } 8%, 92% { --fade-start: 1.75rem; --fade-end: 1.75rem; } to { --fade-start: 1.75rem; --fade-end: 0px; } }
+.lm-strip-wrap { --pad: 0.3rem; position: absolute; z-index: 4; inset-block-end: calc(var(--gap) + env(safe-area-inset-bottom, 0px)); inset-inline-start: 50%; translate: -50% 0;
+  display: flex; align-items: center; gap: 0.15rem; max-inline-size: min(56rem, calc(100% - 2 * (var(--gap) + 16rem)));   /* clear of the bottom-left chips */ padding: var(--pad);
+  border-radius: 999px; background: var(--panel); box-shadow: 0 4px 16px oklch(0 0 none / 0.22); }
+.lm-strip { display: flex; gap: 0.3rem; min-inline-size: 0; overflow-x: auto; overscroll-behavior-x: contain; scrollbar-width: none;
+  scroll-snap-type: x proximity; padding-inline: 0.25rem; scroll-padding-inline: 0.25rem; border-radius: 999px;
+  animation: lm-edges linear; animation-timeline: scroll(self inline);
+  mask-image: linear-gradient(to right, transparent, #000 var(--fade-start), #000 calc(100% - var(--fade-end)), transparent); }
+.lm-strip::-webkit-scrollbar { display: none; }
+@media (prefers-reduced-motion: no-preference) { .lm-strip { scroll-behavior: smooth; } }
+.lm-pill { flex: none; scroll-snap-align: start; display: inline-flex; align-items: center; gap: 0.45rem; padding: 0.2rem 0.8rem 0.2rem 0.2rem; border: 0;
+  border-radius: 999px; background: transparent; color: inherit; font: inherit; font-size: 0.82rem; font-weight: 600; white-space: nowrap; cursor: pointer; }
+.lm-pill .lm-ic { inline-size: 32px; block-size: 32px; }
+.lm-pill[aria-current] { background: var(--accent); color: var(--accent-ink); }
+.lm-pill:active, .lm-arrow:active:not(:disabled) { scale: 0.95; }
+.lm-arrow { flex: none; display: grid; place-items: center; inline-size: 2.25rem; block-size: 2.25rem; padding: 0; border: 0; border-radius: 50%;
+  background: transparent; color: inherit; cursor: pointer; }
+.lm-arrow svg { inline-size: 1.1rem; block-size: 1.1rem; }
+.lm-arrow:disabled { opacity: 0.3; cursor: default; }
+.lm-strip-wrap.fits .lm-arrow { display: none; }
+@media (hover: hover) and (pointer: fine) {
+  .lm-pill:hover:not([aria-current]), .lm-arrow:hover:not(:disabled) { background: color-mix(in oklch, var(--fg) 9%, transparent); }
+}
+@media (prefers-reduced-motion: no-preference) { .lm-pill, .lm-arrow { transition: background-color 160ms var(--ease-out), scale 140ms var(--ease-out); } }
+body.hide-lm .lm-strip-wrap { display: none; }
+@media (width < 40rem) {
+  .lm-strip-wrap { inset-block: calc(7.6rem + env(safe-area-inset-top, 0px)) auto; translate: none; max-inline-size: none;
+    inset-inline: calc(var(--gap) + env(safe-area-inset-left, 0px)) calc(var(--gap) + env(safe-area-inset-right, 0px)); }
+  @media (pointer: fine) { .lm-strip-wrap { inset-inline-end: calc(var(--gap) + 7.6rem + env(safe-area-inset-right, 0px)); } }   /* narrow desktop windows keep the minimap */
+  .lm-arrow { display: none; }
+  .lm-pill { padding: 0.1rem; } .lm-pill .nm { display: none; } .lm-pill .lm-ic { inline-size: 36px; block-size: 36px; }
+}
+@media (width < 40rem) { body:not(.hide-lm) .follow-chip { inset-block-start: calc(10.6rem + env(safe-area-inset-top, 0px)); } }
+
+/* bottom-left corner: buses chip, planes chip and attribution in ONE column; the gap is set here (good-css: space
+   between siblings set by the parent), and the column stays clear of the tool column on the right */
+.corner { position: absolute; z-index: 3; inset-inline-start: calc(var(--gap) + env(safe-area-inset-left, 0px));
+  inset-block-end: calc(0.4rem + env(safe-area-inset-bottom, 0px)); display: flex; flex-direction: column; align-items: flex-start; gap: 0.45rem;
+  max-inline-size: calc(100% - 2 * var(--gap) - 3.75rem - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px)); pointer-events: none; }
+.corner > * { position: static !important; inset: auto !important; translate: none !important; margin: 0 !important; max-inline-size: 100%; pointer-events: auto; }
+.buses-chip button.lines { color: var(--accent-ink); background: var(--accent); font-weight: 650; }
+@media (hover: hover) and (pointer: fine) { .buses-chip button.lines:hover { background: color-mix(in oklch, var(--accent), black 8%); } }
+.goto-buses { font-weight: 650; }
+@media (width >= 40rem) { .corner .attr { max-inline-size: 15rem; } }   /* wraps instead of running under the landmark strip */
 </style>
 </head>
 <body>

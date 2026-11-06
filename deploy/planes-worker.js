@@ -46,7 +46,7 @@ export default {
 };
 
 // ---------- anonymous usage events ----------
-const ALLOWED = new Set(['view', 'look', 'landmark', 'tab', 'toggle', 'search', 'share', 'follow', 'line', 'plane', 'card', 'time', 'perf', 'error']);
+const ALLOWED = new Set(['view', 'look', 'landmark', 'tab', 'toggle', 'search', 'share', 'follow', 'line', 'plane', 'card', 'time', 'perf', 'error', 'strip']);
 async function events(request, env) {
   if (request.method !== 'POST') return new Response(null, { status: 405 });
   const len = Number(request.headers.get('content-length') || 0);

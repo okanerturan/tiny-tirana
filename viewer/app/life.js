@@ -219,30 +219,20 @@ export async function initLife({ viewer, item, origin, button, avif, base = 'lif
     ctx.globalAlpha = Math.min(1, (tz - Z_MIN) / (Z_FULL - Z_MIN));
     ctx.imageSmoothingEnabled = k < 1.2; ctx.imageSmoothingQuality = 'high';
     const m = 60 / tz, u0 = (-tox) / tz + origin[0] - m, u1 = (W - tox) / tz + origin[0] + m, v0 = (-toy) / tz + origin[1] - m, v1 = (H - toy) / tz + origin[1] + m;
-    // birds: water rings + wakes first, then sprites (back to front)
+    // birds: water rings first, then sprites (back to front)
     if (birds.length || walkers.length) {
       const bg = birdGrow = Math.max(1, BIRD_MIN_PXM * dpr / (PXM * k));   // zoomed out: birds keep a readable size
       const inView = (x, g) => !(x < u0 || x > u1 || g * SQ < v0 || g * SQ > v1);
-      // wakes: a thin Kelvin V (+-19.5 deg) from the bow, fading behind the bird, longer when it paddles faster; then a
-      // faint waterline ring. (The old short, bright fork at the tail made the ducks look like fish.)
-      const KELVIN = 0.34, wakes = [new Path2D(), new Path2D(), new Path2D()], rings2 = new Path2D();
+      // only a faint waterline ring round each bird: any streak behind a body this small reads as a fish tail (tried a
+      // short fork, then a thin Kelvin V; both looked like fish), so there are no wakes at all.
+      const rings2 = new Path2D();
       for (const b of birds) {
         if (b.a < 0.5 || !inView(b.x, b.y) || b.row === B_DUCKLING) continue;          // ducklings swim in their mother's wake
-        const s = b.size * PXM * bg, c = Math.cos(b.th), sn = Math.sin(b.th), sp = Math.min(1, b.G.sp);
-        const bx = b.x + c * s * 0.32, by = b.y + sn * s * 0.32, L = s * (1.0 + 3.0 * sp);      // bow point, wake length
-        for (let side = -1; side <= 1; side += 2) {
-          const a = b.th + Math.PI + side * KELVIN, dx = Math.cos(a), dy = Math.sin(a);
-          for (let seg = 0; seg < 3; seg++) {                                             // three fading thirds
-            const t0 = 0.18 + seg / 3 * 0.82, t1 = 0.18 + (seg + 1) / 3 * 0.82;
-            wakes[seg].moveTo(ox + (bx + dx * L * t0) * k, oy + (by + dy * L * t0) * SQ * k);
-            wakes[seg].lineTo(ox + (bx + dx * L * t1) * k, oy + (by + dy * L * t1) * SQ * k);
-          }
-        }
+        const s = b.size * PXM * bg;
         const ex = ox + b.x * k, ey = oy + b.y * SQ * k, r = 0.36 * s * k;
         rings2.moveTo(ex + r, ey); rings2.ellipse(ex, ey, r, r * SQ * 0.9, 0, 0, 2 * Math.PI);
       }
       ctx.lineCap = 'round'; ctx.lineWidth = Math.max(1, 0.9 * dpr);
-      [0.42, 0.24, 0.1].forEach((al, i) => { ctx.strokeStyle = `rgba(226, 240, 255, ${al})`; ctx.stroke(wakes[i]); });
       ctx.strokeStyle = 'rgba(226, 240, 255, 0.3)'; ctx.stroke(rings2);
       ctx.beginPath();                                         // dive splashes
       for (let i = 0; i < RINGS; i++) {

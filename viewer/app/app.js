@@ -29,7 +29,7 @@ const PROJ = makeProjection(CONFIG.camera);
 const STR = {
   sq: { search: 'Kërko', searchPh: 'Kërko një vend, rrugë…', goto: 'Shko te', share: 'Ndaj', about: 'Rreth hartës', rotate: 'Rrotullo',
         zoomIn: 'Zmadho', zoomOut: 'Zvogëlo', home: 'E gjithë harta', close: 'Mbyll', copied: 'Lidhja u kopjua',
-        attr: 'Të dhënat e hartës ©2026 Google · © OpenStreetMap', noResults: 'Asnjë rezultat', landmarks: 'Pika kryesore', places: 'Vende', loading: 'Duke ngarkuar…', photo: 'Foto', onMap: 'Në këtë hartë', flyHere: 'Shko atje', shareHere: 'Shpërndaje', osm: 'Hape në OpenStreetMap', shareView: 'Një hartë izometrike pixel-art e Tiranës', prev: 'E mëparshmja', next: 'Tjetra', artCredit: 'Art: GPT Image 2.6, krijuar për këtë hartë', illustration: 'Ilustrim', views: 'Pamjet', diorama: 'Diorama', poster: 'Poster', landmarksBtn: 'Pikat kryesore', following: 'Duke ndjekur', stopFollow: 'Ndalo', follow: 'Ndiq', unfollow: 'Mos ndiq', aCar: 'një makinë', landmarksOn: 'Pikat kryesore u shfaqën', landmarksOff: 'Pikat kryesore u fshehën', aboutBrand: 'Tiny Tirana: rreth hartës', howLink: 'Si u bë kjo hartë (anglisht) →', planes: 'Avionët live', onGround: 'në tokë', demo: 'demo, jo e vërtetë', planesLive: '✈ {n} avionë live', planesNone: '✈ Asnjë avion tani', planesDemo: '✈ {n} avionë demo', buses: 'Autobusët (sipas orarit)', life: 'Makina',
+        attr: 'Të dhënat e hartës ©2026 Google · © OpenStreetMap', noResults: 'Asnjë rezultat', landmarks: 'Pika kryesore', places: 'Vende', loading: 'Duke ngarkuar…', photo: 'Foto', onMap: 'Në këtë hartë', flyHere: 'Shko atje', busLines: 'Linjat e autobusëve', shareHere: 'Shpërndaje', osm: 'Hape në OpenStreetMap', shareView: 'Një hartë izometrike pixel-art e Tiranës', prev: 'E mëparshmja', next: 'Tjetra', artCredit: 'Art: GPT Image 2.6, krijuar për këtë hartë', illustration: 'Ilustrim', views: 'Pamjet', diorama: 'Diorama', poster: 'Poster', landmarksBtn: 'Pikat kryesore', following: 'Duke ndjekur', stopFollow: 'Ndalo', follow: 'Ndiq', unfollow: 'Mos ndiq', aCar: 'një makinë', landmarksOn: 'Pikat kryesore u shfaqën', landmarksOff: 'Pikat kryesore u fshehën', aboutBrand: 'Tiny Tirana: rreth hartës', howLink: 'Si u bë kjo hartë (anglisht) →', planes: 'Avionët live', onGround: 'në tokë', demo: 'demo, jo e vërtetë', planesLive: '✈ {n} avionë live', planesNone: '✈ Asnjë avion tani', planesDemo: '✈ {n} avionë demo', buses: 'Autobusët (sipas orarit)', life: 'Makina',
         kinds: { landmark: 'monument', square: 'shesh', park: 'park', water: 'ujë', neighbourhood: 'lagje', place: 'vend', street: 'rrugë', building: 'ndërtesë' },
         aboutBody: `<p>Një pikturë izometrike pixel-art e qytetit të Tiranës dhe aeroportit të Rinasit, e vizatuar bllok pas blloku nga një model i trajnuar mbi pamjet 3D të qytetit.</p>
           <p>Projekt personal, jo-tregtar. Pikturuar me Qwen-Image 2.1 + LoRA <i>tiranaiso</i>. Gjeometria nga Google Photorealistic 3D Tiles; emrat nga OpenStreetMap.</p>
@@ -38,7 +38,7 @@ const STR = {
           <p class="privacy">Statistika anonime: pa cookies dhe pa të dhëna personale. Numërojmë cilat vende dhe funksione përdoren, sa kohë shihet harta, sa shpejt ngarkohet dhe gabimet e faqes; nga serveri ruhet vetëm shteti, jo adresa IP. Nëse shfletuesi juaj kërkon të mos ndiqet (Do Not Track / GPC), nuk dërgohet asgjë.</p>` },
   en: { search: 'Search', searchPh: 'Search a place, street…', goto: 'Go to', share: 'Share', about: 'About this map', rotate: 'Rotate',
         zoomIn: 'Zoom in', zoomOut: 'Zoom out', home: 'Whole map', close: 'Close', copied: 'Link copied',
-        attr: 'Map data ©2026 Google · © OpenStreetMap', noResults: 'No results', landmarksBtn: 'Landmarks', following: 'Following', stopFollow: 'Stop', follow: 'Follow', unfollow: 'Unfollow', aCar: 'a car', landmarksOn: 'Landmarks shown', landmarksOff: 'Landmarks hidden', landmarks: 'Landmarks', places: 'Places', loading: 'Loading…', photo: 'Photo', onMap: 'On this map', flyHere: 'Fly here', shareHere: 'Share', osm: 'Open in OpenStreetMap', shareView: 'An isometric pixel-art map of Tirana', prev: 'Previous', next: 'Next', artCredit: 'Art: GPT Image 2.6, made for this map', illustration: 'Illustration', views: 'Views', diorama: 'Diorama', poster: 'Poster', aboutBrand: 'Tiny Tirana: about this map', howLink: 'How this map was made →', planes: 'Live planes', onGround: 'on the ground', demo: 'demo, not real', planesLive: '✈ {n} live planes', planesNone: '✈ No planes right now', planesDemo: '✈ {n} demo planes', buses: 'Buses (timetable)', life: 'Cars',
+        attr: 'Map data ©2026 Google · © OpenStreetMap', noResults: 'No results', landmarksBtn: 'Landmarks', following: 'Following', stopFollow: 'Stop', follow: 'Follow', unfollow: 'Unfollow', aCar: 'a car', landmarksOn: 'Landmarks shown', landmarksOff: 'Landmarks hidden', landmarks: 'Landmarks', places: 'Places', loading: 'Loading…', photo: 'Photo', onMap: 'On this map', flyHere: 'Fly here', busLines: 'Bus lines and timetable', shareHere: 'Share', osm: 'Open in OpenStreetMap', shareView: 'An isometric pixel-art map of Tirana', prev: 'Previous', next: 'Next', artCredit: 'Art: GPT Image 2.6, made for this map', illustration: 'Illustration', views: 'Views', diorama: 'Diorama', poster: 'Poster', aboutBrand: 'Tiny Tirana: about this map', howLink: 'How this map was made →', planes: 'Live planes', onGround: 'on the ground', demo: 'demo, not real', planesLive: '✈ {n} live planes', planesNone: '✈ No planes right now', planesDemo: '✈ {n} demo planes', buses: 'Buses (timetable)', life: 'Cars',
         kinds: { landmark: 'landmark', square: 'square', park: 'park', water: 'water', neighbourhood: 'area', place: 'place', street: 'street', building: 'building' },
         aboutBody: `<p>An isometric pixel-art painting of the city of Tirana and Rinas airport, drawn block by block by a model trained on the city's 3D view.</p>
           <p>Personal, non-commercial project. Painted with Qwen-Image 2.1 + the <i>tiranaiso</i> LoRA. Geometry from Google Photorealistic 3D Tiles; names from OpenStreetMap.</p>
@@ -64,18 +64,21 @@ const M = CONFIG.map, maxLevel = Math.ceil(Math.log2(Math.max(M.width, M.height)
 // AVIF is ~30 % smaller at the same quality; one 1x1 decode test decides, WebP otherwise.
 const AVIF = await new Promise(res => { const i = new Image(); i.onload = () => res(i.width === 1); i.onerror = () => res(false);
   i.src = 'data:image/avif;base64,AAAAIGZ0eXBhdmlmAAAAAGF2aWZtaWYxbWlhZk1BMUIAAADrbWV0YQAAAAAAAAAhaGRscgAAAAAAAAAAcGljdAAAAAAAAAAAAAAAAAAAAAAOcGl0bQAAAAAAAQAAAB5pbG9jAAAAAEQAAAEAAQAAAAEAAAETAAAAKAAAAChpaW5mAAAAAAABAAAAGmluZmUCAAAAAAEAAGF2MDFDb2xvcgAAAABqaXBycAAAAEtpcGNvAAAAFGlzcGUAAAAAAAAAAQAAAAEAAAAQcGl4aQAAAAADCAgIAAAADGF2MUOBAAwAAAAAE2NvbHJuY2x4AAEADQAGgAAAABdpcG1hAAAAAAAAAAEAAQQBAoMEAAAAMG1kYXQSAAoIGAAGiAhoNCAyGhlHh4Yhh5555oAAAJBAyRxgkGEETy8OpPuA'; });
+// Tile revision: bumped whenever a tile set is re-uploaded. It changes every URL, so the CDN never serves a tile (or a
+// 404 cached while the upload was still running) from before the upload. R2 ignores the query.
+const TILE_REV = '?r=2';
 const ext = layer => (AVIF && layer.formats.includes('avif') ? 'avif' : 'webp');
 // Which tiles exist ({base}_index.json from post/tile_index.py): empty tiles are never written, so never ask for them.
 const tileIndex = async layer => {
   if (!layer.index) return;
   try {
-    const d = await (await fetch(`${layer.base}_index.json`)).json();
+    const d = await (await fetch(`${layer.base}_index.json${TILE_REV}`)).json();
     layer.has = Object.fromEntries(Object.entries(d.levels).map(([l, [cols, , b64]]) => [l, { cols, bits: Uint8Array.from(atob(b64), c => c.charCodeAt(0)) }]));
   } catch (e) { console.warn('[tiles] no index for', layer.base, e); }
 };
 const dzi = layer => { const e = ext(layer), w = layer.width ?? M.width, h = layer.height ?? M.height;
   const src = { width: w, height: h, tileSize: layer.tileSize ?? M.tileSize, tileOverlap: layer.overlap ?? M.overlap, minLevel: 8,
-    maxLevel: Math.ceil(Math.log2(Math.max(w, h))), getTileUrl: (l, x, y) => `${layer.base}_files/${l}/${x}_${y}.${e}` };
+    maxLevel: Math.ceil(Math.log2(Math.max(w, h))), getTileUrl: (l, x, y) => `${layer.base}_files/${l}/${x}_${y}.${e}${TILE_REV}` };
   if (layer.has) src.tileExists = (l, x, y) => { const t = layer.has[l]; if (!t) return true; const i = y * t.cols + x; return x < t.cols && !!(t.bits[i >> 3] & (1 << (i & 7))); };
   return src; };
 await Promise.all([M, ...CONFIG.islands].map(tileIndex));
@@ -86,11 +89,19 @@ const viewer = OpenSeadragon({
   element: document.getElementById('map'), tileSources: dzi(M),
   showNavigationControl: false, maxZoomPixelRatio: MAX_ZOOM,   // closer than this the painting starts to read as a photo
   showNavigator: true, navigatorId: 'minimap', navigatorAutoResize: true, navigatorAutoFade: false, navigatorDisplayRegionColor: 'transparent', minZoomImageRatio: 0.85, visibilityRatio: 0.6, constrainDuringPan: true,
-  imageLoaderLimit: 8, maxImageCacheCount: 500, immediateRender: false, blendTime: 0.15, animationTime: 0.9, springStiffness: 7.5,
+  // snappy zoom (like Isometric Istanbul): short springy animation, big wheel steps, tiles appear without a fade
+  imageLoaderLimit: 12, maxImageCacheCount: 600, immediateRender: false, blendTime: 0, animationTime: 0.45, springStiffness: 12,
+  zoomPerScroll: 1.45, zoomPerClick: 2,
   preserveImageSizeOnResize: true, gestureSettingsMouse: { clickToZoom: false, dblClickToZoom: true }, gestureSettingsTouch: { pinchRotate: false },
   crossOriginPolicy: false,
 });
 const item = () => viewer.world.getItemAt(0);
+{ const corner = document.createElement('div'); corner.className = 'corner';
+  const pc = document.getElementById('planesChip'); pc.before(corner);
+  corner.append(document.getElementById('busesChip'), pc, document.querySelector('.attr')); }
+// It's a map, not a document: no context menu, copy, cut or paste (except in the search box and other text fields).
+const editable = t => t instanceof Element && t.closest('input, textarea, [contenteditable="true"]');
+for (const ev of ['contextmenu', 'copy', 'cut', 'paste', 'dragstart']) document.addEventListener(ev, e => { if (!editable(e.target)) e.preventDefault(); });
 const ox = CONFIG.canvasOrigin[0], oy = CONFIG.canvasOrigin[1];
 // The 3D model's ground in central Tirana is ~146 m (ellipsoidal), 9 m below the camera anchor height; place things on it.
 const GROUND = GEO.ground;
@@ -143,7 +154,9 @@ viewer.addHandler('open', () => {
   initLife({ viewer, item, origin: CONFIG.canvasOrigin, button: document.getElementById('lifeBtn'), avif: AVIF }).catch(e => console.warn('[life]', e));
   initCableCar({ viewer, item, origin: CONFIG.canvasOrigin }).catch(e => console.warn('[cablecar]', e));
   initBuses({ viewer, item, button: document.getElementById('busesBtn'), chip: document.getElementById('busesChip'), origin: CONFIG.canvasOrigin, lang: () => lang });
-  try { initTiltShift({ viewer, item, button: document.getElementById('tsBtn') }); } catch (e) { console.warn('[tiltshift]', e); }
+  // tilt-shift only with a mouse: on phones the blur bands fight the pinch zoom and the bottom sheet (and cost battery)
+  if (matchMedia('(pointer: coarse)').matches) document.getElementById('tsBtn').hidden = true;
+  else try { initTiltShift({ viewer, item, button: document.getElementById('tsBtn') }); } catch (e) { console.warn('[tiltshift]', e); }
   const lm0 = LANDMARKS.find(x => x.id === Q.get('lm'));             // a shared landmark link: open its card
   if (lm0) openCard(lm0); else if (Q.get('lm')) setLm(null);
 });
@@ -251,7 +264,10 @@ function addMarkers() {
     const el = document.createElement('button'); el.className = 'lm'; el.type = 'button';
     el.innerHTML = `<span class="lm-chip"><span class="lm-ic">${iconPic(p.id)}</span><span class="lm-name"></span></span><i class="lm-stem" aria-hidden="true"></i>`;
     // OSD captures pointer events on its canvas, so a plain 'click' never fires on overlays: use its MouseTracker.
-    new OpenSeadragon.MouseTracker({ element: el, clickHandler: e => { e.preventDefaultAction = true; openCard(p, el); } });
+    // only a real tap opens the card: OSD's 'quick' click (short press, finger moved < clickDistThreshold). A drag that
+    // starts or ends on a marker pans the map instead (on phones every swipe used to open whatever it crossed).
+    new OpenSeadragon.MouseTracker({ element: el, clickTimeThreshold: 350, clickDistThreshold: 6,
+      clickHandler: e => { if (!e.quick) return; e.preventDefaultAction = true; openCard(p, el); } });
     el.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openCard(p, el); } });
     const [x, y] = toImage(p.lat, p.lon, (p.top ?? GROUND) + 3), pt = it.imageToViewportCoordinates(x, y);
     viewer.addOverlay({ element: el, location: pt, placement: OpenSeadragon.Placement.BOTTOM, checkResize: false });
@@ -259,7 +275,34 @@ function addMarkers() {
   }
   labelMarkers(); applyLandmarksOn(); layoutMarkers(); addMinimapDots();
 }
-function labelMarkers() { for (const m of markers) { m.el.querySelector('.lm-name').textContent = nm(m.p); m.el.setAttribute('aria-label', nm(m.p)); m.w = 0; } }
+// ---------------- landmark strip: every landmark as a small pill (bottom centre; under the search bar on phones) ----------------
+const stripWrap = document.createElement('div'); stripWrap.className = 'lm-strip-wrap';
+stripWrap.innerHTML = `<button type="button" class="lm-arrow" data-dir="-1"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 6-6 6 6 6"/></svg></button>`
+  + `<nav class="lm-strip"></nav><button type="button" class="lm-arrow" data-dir="1"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg></button>`;
+document.querySelector('.shell').append(stripWrap);
+const strip = stripWrap.querySelector('.lm-strip'), [stripPrev, stripNext] = stripWrap.querySelectorAll('.lm-arrow');
+const stripSync = () => { const max = strip.scrollWidth - strip.clientWidth, x = Math.abs(strip.scrollLeft);
+  stripPrev.disabled = x <= 1; stripNext.disabled = x >= max - 1; stripWrap.classList.toggle('fits', max <= 1); };
+for (const btn of [stripPrev, stripNext]) btn.addEventListener('click', () => strip.scrollBy({ left: Number(btn.dataset.dir) * strip.clientWidth * 0.8 }));
+strip.addEventListener('scroll', stripSync, { passive: true }); addEventListener('resize', stripSync);
+function buildStrip() {
+  strip.setAttribute('aria-label', t('landmarks')); stripPrev.setAttribute('aria-label', t('prev')); stripNext.setAttribute('aria-label', t('next')); strip.replaceChildren();
+  for (const p of LANDMARKS) {
+    const b = document.createElement('button'); b.type = 'button'; b.className = 'lm-pill'; b.dataset.id = p.id; b.title = nm(p);
+    b.innerHTML = `<span class="lm-ic">${iconPic(p.id)}</span><span class="nm"></span>`; b.querySelector('.nm').textContent = nm(p);
+    b.addEventListener('click', () => { track('strip', { id: p.id }); openCard(p, b); });
+    strip.append(b);
+  }
+  markStrip(); requestAnimationFrame(stripSync);
+}
+function markStrip() {
+  const id = cardIdx >= 0 ? LANDMARKS[cardIdx]?.id : null;
+  for (const b of strip.children) {
+    const on = b.dataset.id === id; b.toggleAttribute('aria-current', on);
+    if (on) b.scrollIntoView({ inline: 'center', block: 'nearest', behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
+  }
+}
+function labelMarkers() { for (const m of markers) { m.el.querySelector('.lm-name').textContent = nm(m.p); m.el.setAttribute('aria-label', nm(m.p)); m.w = 0; } buildStrip(); }
 const NEAR = 0.2;   // image zoom from which names are always shown
 function layoutMarkers() {
   const it = item(); if (!it || !markers.length) return;
@@ -322,7 +365,7 @@ addEventListener('resize', () => fitCard());
 let cardSeen = null;   // { id, t }: how long a card stayed open (analytics 'card')
 const cardDone = () => { if (cardSeen) track('card', { id: cardSeen.id, secs: Math.round((performance.now() - cardSeen.t) / 1000) }); cardSeen = null; };
 async function openCard(p, from) {
-  cardDone(); cardSeen = { id: p.id, t: performance.now() };
+  cardDone(); cardSeen = { id: p.id, t: performance.now() }; cardOpenedAt = performance.now();
   cardIdx = LANDMARKS.indexOf(p); cardReturn = from || document.activeElement; track('landmark', { id: p.id });
   const c = (await loadCredits())[p.id] || {};
   const facts = p.facts[lang].map(([k, v]) => `<div><dt>${k}</dt><dd>${v}</dd></div>`).join('');
@@ -358,7 +401,7 @@ async function openCard(p, from) {
     stage.dataset.show = b.dataset.v; for (const o of card.querySelectorAll('.tabs-v button')) o.setAttribute('aria-pressed', String(o === b)); track('tab', { v: b.dataset.v }); });
   card.hidden = false; card.scrollTop = 0; fitCard();
   go(p.lat, p.lon, Math.min(p.zoom, 0.5)); clearPin();   // the landmark's own marker marks the spot (no second label)
-  for (const m of markers) m.el.classList.toggle('active', m.p === p);
+  for (const m of markers) m.el.classList.toggle('active', m.p === p); markStrip();
   card.querySelector('.card-close').addEventListener('click', closeCard);
   card.querySelector('[data-act="share"]').addEventListener('click', () => shareLandmark(p));
   setLm(p.id);
@@ -366,7 +409,14 @@ async function openCard(p, from) {
   card.querySelector('[data-act="next"]').addEventListener('click', () => openCard(LANDMARKS[(cardIdx + 1) % LANDMARKS.length]));
   card.querySelector('h2').focus?.(); card.querySelector('.card-close').focus({ preventScroll: true });
 }
-function closeCard() { cardDone(); setLm(null); card.hidden = true; cardIdx = -1; for (const m of markers) m.el.classList.remove('active'); cardReturn?.focus?.({ preventScroll: true, focusVisible: false }); }
+function closeCard() { cardDone(); setLm(null); card.hidden = true; cardIdx = -1; markStrip(); for (const m of markers) m.el.classList.remove('active'); cardReturn?.focus?.({ preventScroll: true, focusVisible: false }); }
+// a tap on the map (not a drag, not on a marker: that opens its own card) closes the open card
+let cardOpenedAt = 0;
+viewer.addHandler('canvas-click', e => {
+  if (cardIdx < 0 || !e.quick || performance.now() - cardOpenedAt < 400) return;
+  if (e.originalEvent?.target?.closest?.('.lm, .plane, .lm-strip-wrap')) return;
+  closeCard();
+});
 addEventListener('keydown', e => {
   if (cardIdx < 0) return;
   if (e.key === 'Escape') closeCard();
@@ -374,8 +424,18 @@ addEventListener('keydown', e => {
   else if (e.key === 'ArrowLeft' && card.contains(document.activeElement)) openCard(LANDMARKS[(cardIdx + LANDMARKS.length - 1) % LANDMARKS.length]);
 });
 
+// open the bus lines list from anywhere: switch the layer on if needed, then wait for its chip and press 'Lines'
+function openBusLines() {
+  const btn = document.getElementById('busesBtn');
+  if (btn?.getAttribute('aria-pressed') !== 'true') btn?.click();
+  let n = 0; const tryOpen = () => { const l = document.querySelector('#busesChip:not([hidden]) button.lines');
+    if (l) { if (l.getAttribute('aria-expanded') !== 'true') l.click(); track('toggle', { layer: 'buslines' }); } else if (n++ < 40) setTimeout(tryOpen, 150); };
+  tryOpen();
+}
 function buildGoto() {
   const el = document.getElementById('goto'); el.replaceChildren();
+  const bl = document.createElement('button'); bl.className = 'plain goto-buses'; bl.textContent = '🚌 ' + t('busLines');
+  bl.addEventListener('click', () => { el.hidePopover(); openBusLines(); }); el.append(bl);
   const h = document.createElement('h2'); h.textContent = t('landmarks'); el.append(h);
   for (const p of LANDMARKS) {
     const b = document.createElement('button'); b.innerHTML = iconPic(p.id); b.append(nm(p));

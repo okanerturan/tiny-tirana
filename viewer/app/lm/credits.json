@@ -160,5 +160,53 @@
   "license": "CC BY-SA 3.0",
   "license_url": "https://creativecommons.org/licenses/by-sa/3.0",
   "page": "https://commons.wikimedia.org/wiki/File:Terminal_jashte.jpg"
+ },
+ "dajtitop": {
+  "artist": "Jan Pešula",
+  "license": "CC0",
+  "license_url": "http://creativecommons.org/publicdomain/zero/1.0/deed.en",
+  "page": "https://commons.wikimedia.org/wiki/File:Dajti_Tower_with_cablecar.JPG"
+ },
+ "teg": {
+  "artist": "Kj1595",
+  "license": "CC BY-SA 4.0",
+  "license_url": "https://creativecommons.org/licenses/by-sa/4.0",
+  "page": "https://commons.wikimedia.org/wiki/File:TEG_Tirana_2016.jpg"
+ },
+ "bunkart1": {
+  "artist": "Andrew Milligan sumo",
+  "license": "CC BY 2.0",
+  "license_url": "https://creativecommons.org/licenses/by/2.0",
+  "page": "https://commons.wikimedia.org/wiki/File:Bunk%27Art_1,_Tirana,_Albania_(49769476482).jpg"
+ },
+ "downtown1": {
+  "artist": "BBB2021",
+  "license": "CC BY-SA 4.0",
+  "license_url": "https://creativecommons.org/licenses/by-sa/4.0",
+  "page": "https://commons.wikimedia.org/wiki/File:Downtown_One_Tirana_2025.jpg"
+ },
+ "congress": {
+  "artist": "Andrew Milligan sumo",
+  "license": "CC BY 2.0",
+  "license_url": "https://creativecommons.org/licenses/by/2.0",
+  "page": "https://commons.wikimedia.org/wiki/File:Palace_of_Congresses,_Tirana,_Albania_(49601764613).jpg"
+ },
+ "botanical": {
+  "artist": "ErtonKashta",
+  "license": "CC BY-SA 4.0",
+  "license_url": "https://creativecommons.org/licenses/by-sa/4.0",
+  "page": "https://commons.wikimedia.org/wiki/File:Botanical_garden_Tirana_-_Kopshti_botanik.jpg"
+ },
+ "zoo": {
+  "artist": "BBB2021",
+  "license": "CC BY-SA 4.0",
+  "license_url": "https://creativecommons.org/licenses/by-sa/4.0",
+  "page": "https://commons.wikimedia.org/wiki/File:Tirana_Zoo_2023.jpg"
+ },
+ "paskuqan": {
+  "artist": "Anatavital",
+  "license": "CC BY-SA 4.0",
+  "license_url": "https://creativecommons.org/licenses/by-sa/4.0",
+  "page": "https://commons.wikimedia.org/wiki/File:Liqeni_i_Paskuqanit_(Paskuqan_Lake)_%E2%80%93_Urban_Lake_and_Park_in_Northern_Tirana.jpg"
  }
 }

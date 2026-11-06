@@ -12,6 +12,15 @@ DATA = os.path.join(ROOT, '..', 'data', 'landmarks')
 EDIT = 'openai/gpt-image-2.6/flare/edit'
 WD = json.load(open(os.path.join(DATA, 'wikidata.json')))
 NAMES = {  # display names used in prompts (English, as on Wikidata, plus a hint where it helps the model)
+    'dajtitop': 'the upper station of the Dajti Ekspres cable car and the round Dajti Tower Belvedere hotel on Mount Dajti',
+    'teg': 'TEG, Tirana East Gate shopping centre',
+    'bunkart1': "Bunk'Art 1, the Cold War bunker museum at the foot of Mount Dajti",
+    'downtown1': 'Downtown One, the tall glass residential tower in Tirana with balconies forming a map of Albania',
+    'congress': 'the Palace of Congresses in Tirana',
+    'botanical': 'the Botanical Garden of Tirana',
+    'zoo': 'the Tirana Zoo park',
+    'paskuqan': 'Lake Paskuqan on the north-west edge of Tirana',
+    'thate': 'Liqeni i Thatë, a small lake in a park in Tirana',
     'histmuseum': 'the National History Museum of Albania (with its huge facade mosaic)',
     'parliament': 'the Parliament of Albania building',
     'pmoffice': "the Prime Minister's Office of Albania (Kryeministria)",
@@ -39,6 +48,15 @@ NAMES = {  # display names used in prompts (English, as on Wikidata, plus a hint
     'postbllok': 'the Postbllok memorial (bunker, concrete pillars and Berlin Wall segment)', 
     'stadium': 'the Air Albania Stadium (with its tower)', 'lake': 'Tirana Artificial Lake', 'park': 'the Grand Park of Tirana'}
 FEATURES = {
+    'dajtitop': 'a round multi-storey glass-topped hotel tower and a small cable-car station with red gondolas arriving, on a green forested mountain plateau, mountain slopes behind.',
+    'teg': 'a large modern shopping mall with a tall glass entrance canopy on slanted steel legs, a wide plaza and parking in front.',
+    'bunkart1': 'a concrete bunker entrance tunnelled into a forested hillside, a heavy steel door and a small colourful sign, a few old army trucks nearby.',
+    'downtown1': 'a very tall slim glass skyscraper whose protruding balconies form a pattern shaped like the map of Albania on its facade, over a city of low roofs.',
+    'congress': 'a modernist 1980s building with a long curved facade of pale stone and blue glass bands, raised on concrete pillars, lawn in front.',
+    'botanical': 'a garden of lawns, round clipped shrubs, palm trees and gravel paths around a red-roofed villa and greenhouses.',
+    'zoo': 'a modern zoo park with winding wooden boardwalks, a pond with islands, animal enclosures and timber pavilions among trees.',
+    'paskuqan': 'a wide calm blue lake with grassy shores, small houses on the far side and mountains behind.',
+    'thate': 'a small calm lake in a green park with a footpath around it, trees and benches, city blocks beyond.',
     'histmuseum': 'a long low modernist building with a huge colourful mosaic of figures from Albanian history above a row of square columns at the entrance.',
     'parliament': 'a symmetrical pale building with a classical portico of columns and a red Albanian flag over the entrance, among palm trees.',
     'pmoffice': 'a long Italian-era government building with pale ochre walls and many windows, on a wide boulevard.',
@@ -70,6 +88,15 @@ FEATURES = {
     'postbllok': 'a small domed concrete bunker, a few tall concrete mine-shaft pillars and a painted segment of the Berlin Wall, in a green corner.',
     'stadium': 'a modern football stadium with a red, white and grey facade and a tall slim hotel tower rising from one corner.'}
 COMPOSE = {  # varied compositions for the graphic prints, so the set isn't ten sun discs
+    'dajtitop': 'Gondola gliding up to the station, the round tower against the sky.',
+    'teg': 'The glass canopy as a bold angular shape, evening lights.',
+    'bunkart1': 'A dark tunnel mouth in the hillside, strong shadow, a single bulb.',
+    'downtown1': 'Very tall narrow crop, the tower soaring up, its balconies as a bold pattern.',
+    'congress': 'The curved facade as sweeping horizontal bands.',
+    'botanical': 'Palm fronds framing the villa, layered greens.',
+    'zoo': 'Boardwalk curving over the pond, a heron in the water.',
+    'paskuqan': 'Calm lake in wide bands, mountains in layered silhouettes.',
+    'thate': 'Small lake framed by trees, ripples and a bench.',
     'histmuseum': 'The mosaic facade as a bold frieze filling the frame.',
     'parliament': 'Front view, columns and flag, strict symmetry.',
     'pmoffice': 'Long facade receding along the boulevard, dusk.',

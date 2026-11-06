@@ -63,6 +63,8 @@ def main():
             p = os.path.join(d, f); files.append((p, f'{prefix}/{os.path.relpath(p, base)}'))
     have = listing(bucket, f'{prefix}/{os.path.basename(src)}/') if '--skip-existing' in a else {}
     todo = [(p, k) for p, k in files if have.get(k) != os.path.getsize(p)]
+    lvl = lambda k: int(m.group(1)) if (m := re.search(r'_files/(\d+)/', k)) else -1
+    todo.sort(key=lambda pk: lvl(pk[1]))                  # coarse levels first: the zoomed-out map works soonest
     print(f'{len(files)} files, {len(todo)} to upload ({sum(os.path.getsize(p) for p, _ in todo) / 1e9:.2f} GB)', flush=True)
     done = [0]; t0 = time.time()
     failed = []

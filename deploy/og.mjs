@@ -1,6 +1,6 @@
 // Social preview images (1200 x 630 JPEG) for tirana.fyi.
 //   node deploy/og.mjs [site] [landmarks]      (dev server on 127.0.0.1:8765, viewer/dev_server.py)
-// site:      viewer/app/og/tirana.jpg   the whole island in its clouds, title on the left
+// site:      viewer/app/og/tirana.jpg   central Tirana up close, title on the left
 // landmarks: viewer/app/og/lm/<id>.jpg  the landmark's map view with its diorama art and name
 // Only our own material goes in: the painting and the generated art, never the Wikimedia photos (their licences
 // ask for credit next to the image, which a link preview cannot show).
@@ -20,10 +20,11 @@ if (all || want.includes('site')) {
   const pg = await b.newPage(); await pg.setViewport({ width: 1200, height: 630, deviceScaleFactor: 1 });
   await pg.goto('http://127.0.0.1:8765/app/index.html?lang=en&planes=off', { waitUntil: 'load' }); await sleep(3000);
   // the whole island, nudged to the right half; then hide every control and put the title on the left
-  await pg.evaluate(() => { const v = window.__tt.viewer, it = v.world.getItemAt(0), r = it.getBounds();
-    v.viewport.fitBounds(new OpenSeadragon.Rect(r.x - r.width * 0.55, r.y - r.height * 0.04, r.width * 1.6, r.height * 1.08), true); });
+  // central Tirana (Skanderbeg Square, the boulevard, the Pyramid), shifted right so the title panel doesn't cover it
+  await pg.evaluate(() => { const v = window.__tt.viewer; window.__tt.go(41.3245, 19.8195, 0.11, true);
+    v.viewport.panBy(v.viewport.deltaPointsFromPixels(new OpenSeadragon.Point(-300, 0)), true); });
   await sleep(7000);
-  await pg.addStyleTag({ content: `.shell > *:not(#map), .lm, .navigator, .planes-layer, .tilt, #card, .toast { display: none !important; }` });
+  await pg.addStyleTag({ content: `.shell > *:not(#map), .navigator, .planes-layer, .tilt, #card, .toast { display: none !important; }` });
   await pg.evaluate(font => { const d = document.createElement('div'); d.innerHTML = `
     <div style="position:fixed; inset-block:0; inset-inline-start:0; inline-size:560px; padding:64px 0 0 64px; font-family:${font}; color:oklch(0.24 0.01 250); z-index:9;
       background:linear-gradient(90deg, oklch(0.97 0.01 250 / 0.92) 55%, transparent)">
