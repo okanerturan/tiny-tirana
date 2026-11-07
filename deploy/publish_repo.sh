@@ -10,5 +10,10 @@ for d in viewer/pairs viewer/compare viewer/orbit viewer/orbit8 viewer/scenes vi
   [ -z "$(git ls-tree -r --name-only HEAD -- $d)" ] || { echo "refusing: $d is tracked"; exit 1; }
 done
 parent=$(git rev-parse -q --verify public/main || true)
-c=$(git commit-tree HEAD^{tree} ${parent:+-p $parent} -m "${1:-Update}")
+# internal notes stay private (PLAN.md is the original build plan: outdated, local paths)
+EXCLUDE="PLAN.md"
+idx=$(mktemp); GIT_INDEX_FILE=$idx git read-tree HEAD
+for f in $EXCLUDE; do GIT_INDEX_FILE=$idx git rm -q --cached --ignore-unmatch -- "$f"; done
+tree=$(GIT_INDEX_FILE=$idx git write-tree); rm -f "$idx"
+c=$(git commit-tree $tree ${parent:+-p $parent} -m "${1:-Update}")
 git push -q public "$c:refs/heads/main" && echo "published $c"
