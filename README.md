@@ -9,7 +9,7 @@ city's own 3D view. Live planes, buses on the real timetable, cars, ducks on the
 
 ## Who made it
 
-Made by [@okanerturan](https://github.com/okanerturan) with **Claude** (Anthropic), working in Claude Code. Claude wrote
+Made by [@okanerturan](https://github.com/okanerturan) with **Claude**, working in Claude Code. Claude wrote
 almost all of the code in this repository, ran the renders, the training and the GPU paintings, and wrote the notes
 the how-it-works page is built from. The human chose the city, the look and the landmarks, and kept sending things
 back until they were right.

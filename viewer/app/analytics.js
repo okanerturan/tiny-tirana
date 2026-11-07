@@ -65,11 +65,13 @@ if (enabled) {
  *  seconds later (2 s sample, only if the tab is visible). Helps to see whether slow phones struggle. */
 export function trackPerf(viewer) {
   if (!enabled) return;
-  viewer.addOnceHandler('tile-loaded', () => track('perf', { first: Math.round(performance.now()) }));
+  // a tab opened in the background loads slowly and animates at ~1 fps: its numbers are not the device's, so skip them
+  let wasHidden = document.hidden; document.addEventListener('visibilitychange', () => { if (document.hidden) wasHidden = true; });
+  viewer.addOnceHandler('tile-loaded', () => { if (!wasHidden) track('perf', { first: Math.round(performance.now()) }); });
   setTimeout(() => {
-    if (document.hidden) return;
+    if (document.hidden || wasHidden) return;
     let n = 0; const t0 = performance.now();
-    const f = () => { n++; if (performance.now() - t0 < 2000) requestAnimationFrame(f); else track('perf', { fps: Math.round(n / ((performance.now() - t0) / 1000)) }); };
+    const f = () => { n++; if (performance.now() - t0 < 2000) requestAnimationFrame(f); else if (!wasHidden) track('perf', { fps: Math.round(n / ((performance.now() - t0) / 1000)) }); };
     requestAnimationFrame(f);
   }, 8000);
 }

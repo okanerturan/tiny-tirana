@@ -35,7 +35,7 @@ const STR = {
         kinds: { landmark: 'monument', square: 'shesh', park: 'park', water: 'ujë', neighbourhood: 'lagje', place: 'vend', street: 'rrugë', building: 'ndërtesë' },
         aboutBody: `<p>Një pikturë izometrike pixel-art e qytetit të Tiranës dhe aeroportit të Rinasit, e vizatuar bllok pas blloku nga një model i trajnuar mbi pamjet 3D të qytetit.</p>
           <p>Projekt personal, jo-tregtar. Pikturuar me Qwen-Image 2.1 + LoRA <i>tiranaiso</i>. Gjeometria nga Google Photorealistic 3D Tiles; emrat nga OpenStreetMap.</p>
-          <p>Bërë nga <a href="https://github.com/okanerturan" rel="noopener">@okanerturan</a> me Claude (Anthropic): Claude shkroi kodin dhe drejtoi gjithë procesin, nga trajnimi te piktura. <a href="https://github.com/okanerturan/tiny-tirana" rel="noopener">Kodi burimor në GitHub</a>.</p>
+          <p>Bërë nga <a href="https://github.com/okanerturan" rel="noopener">@okanerturan</a> me Claude: Claude shkroi kodin dhe drejtoi gjithë procesin, nga trajnimi te piktura. <a href="https://github.com/okanerturan/tiny-tirana" rel="noopener">Kodi burimor në GitHub</a>.</p>
           <p>Frymëzuar nga <a href="https://tiny.london" rel="noopener">tiny.london</a>, <a href="https://isometric.nyc" rel="noopener">isometric.nyc</a> dhe <a href="https://tiny.london/world/" rel="noopener">hartat e tjera</a>. Të gjitha i kemi mbledhur në <a href="../world/">atlasin tonë të qyteteve izometrike</a>.</p>
           <p class="privacy">Statistika anonime: pa cookies dhe pa të dhëna personale. Numërojmë cilat vende dhe funksione përdoren, sa kohë shihet harta, sa shpejt ngarkohet dhe gabimet e faqes; nga serveri ruhet vetëm shteti, jo adresa IP. Numëruesi “tani këtu” numëron vetëm skedat e hapura. Nëse shfletuesi juaj kërkon të mos ndiqet (Do Not Track / GPC), nuk dërgohet asgjë.</p>` },
   en: { search: 'Search', searchPh: 'Search a place, street…', goto: 'Go to', share: 'Share', about: 'About this map', rotate: 'Rotate',
@@ -44,7 +44,7 @@ const STR = {
         kinds: { landmark: 'landmark', square: 'square', park: 'park', water: 'water', neighbourhood: 'area', place: 'place', street: 'street', building: 'building' },
         aboutBody: `<p>An isometric pixel-art painting of the city of Tirana and Rinas airport, drawn block by block by a model trained on the city's 3D view.</p>
           <p>Personal, non-commercial project. Painted with Qwen-Image 2.1 + the <i>tiranaiso</i> LoRA. Geometry from Google Photorealistic 3D Tiles; names from OpenStreetMap.</p>
-          <p>Made by <a href="https://github.com/okanerturan" rel="noopener">@okanerturan</a> with Claude (Anthropic): Claude wrote the code and ran the whole pipeline, from training to the painting. <a href="https://github.com/okanerturan/tiny-tirana" rel="noopener">Source on GitHub</a>.</p>
+          <p>Made by <a href="https://github.com/okanerturan" rel="noopener">@okanerturan</a> with Claude: Claude wrote the code and ran the whole pipeline, from training to the painting. <a href="https://github.com/okanerturan/tiny-tirana" rel="noopener">Source on GitHub</a>.</p>
           <p>Inspired by <a href="https://tiny.london" rel="noopener">tiny.london</a>, <a href="https://isometric.nyc" rel="noopener">isometric.nyc</a> and <a href="https://tiny.london/world/" rel="noopener">the other maps</a>. We collected them all in <a href="../world/">our atlas of isometric cities</a>.</p>
           <p class="privacy">Anonymous statistics: no cookies and no personal data. We count which places and features get used, how long the map is looked at, how fast it loads and page errors; the server keeps only the country, never the IP address. The “here now” counter counts open tabs, nothing more. If your browser asks not to be tracked (Do Not Track / GPC), nothing is sent.</p>` },
 };
@@ -68,7 +68,7 @@ const AVIF = await new Promise(res => { const i = new Image(); i.onload = () => 
   i.src = 'data:image/avif;base64,AAAAIGZ0eXBhdmlmAAAAAGF2aWZtaWYxbWlhZk1BMUIAAADrbWV0YQAAAAAAAAAhaGRscgAAAAAAAAAAcGljdAAAAAAAAAAAAAAAAAAAAAAOcGl0bQAAAAAAAQAAAB5pbG9jAAAAAEQAAAEAAQAAAAEAAAETAAAAKAAAAChpaW5mAAAAAAABAAAAGmluZmUCAAAAAAEAAGF2MDFDb2xvcgAAAABqaXBycAAAAEtpcGNvAAAAFGlzcGUAAAAAAAAAAQAAAAEAAAAQcGl4aQAAAAADCAgIAAAADGF2MUOBAAwAAAAAE2NvbHJuY2x4AAEADQAGgAAAABdpcG1hAAAAAAAAAAEAAQQBAoMEAAAAMG1kYXQSAAoIGAAGiAhoNCAyGhlHh4Yhh5555oAAAJBAyRxgkGEETy8OpPuA'; });
 // Tile revision: bumped whenever a tile set is re-uploaded. It changes every URL, so the CDN never serves a tile (or a
 // 404 cached while the upload was still running) from before the upload. R2 ignores the query.
-const TILE_REV = '?r=5';
+const TILE_REV = '?r=6';
 const ext = layer => (AVIF && layer.formats.includes('avif') ? 'avif' : 'webp');
 // Which tiles exist ({base}_index.json from post/tile_index.py): empty tiles are never written, so never ask for them.
 const tileIndex = async layer => {

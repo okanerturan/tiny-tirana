@@ -113,7 +113,8 @@ def main():
         sz = ndimage.sum(inside, lab, range(1, n + 1)); field[(lab > 0) & (lab != 1 + int(np.argmax(sz)))] = 1.0; inside = field < 0
     ponds = ndimage.binary_fill_holes(inside) & ~inside & painted; lab, n = ndimage.label(ponds)   # no small cloud ponds inland
     if n:
-        sz = ndimage.sum(ponds, lab, range(1, n + 1)); fill = np.isin(lab, 1 + np.flatnonzero(sz < 4000))
+        sz = ndimage.sum(ponds, lab, range(1, n + 1)); fill = lab > 0   # every painted pond, any size: clouds inside the city never read as intended
+        print(f'filled {n} inland cloud ponds, largest {int(sz.max())} cells')
         field[fill] = np.minimum(field[fill], -1.0); inside = field < 0
     print(f'canvas u {U0}..{U1} v {V0}..{V1}; land {inside.sum() * (F * 300 / 2048) ** 2 * math.sqrt(2) / 1e6:.0f} km2 of '
           f'{painted.sum() * (F * 300 / 2048) ** 2 * math.sqrt(2) / 1e6:.0f} painted')
