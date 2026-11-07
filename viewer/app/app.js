@@ -68,7 +68,7 @@ const AVIF = await new Promise(res => { const i = new Image(); i.onload = () => 
   i.src = 'data:image/avif;base64,AAAAIGZ0eXBhdmlmAAAAAGF2aWZtaWYxbWlhZk1BMUIAAADrbWV0YQAAAAAAAAAhaGRscgAAAAAAAAAAcGljdAAAAAAAAAAAAAAAAAAAAAAOcGl0bQAAAAAAAQAAAB5pbG9jAAAAAEQAAAEAAQAAAAEAAAETAAAAKAAAAChpaW5mAAAAAAABAAAAGmluZmUCAAAAAAEAAGF2MDFDb2xvcgAAAABqaXBycAAAAEtpcGNvAAAAFGlzcGUAAAAAAAAAAQAAAAEAAAAQcGl4aQAAAAADCAgIAAAADGF2MUOBAAwAAAAAE2NvbHJuY2x4AAEADQAGgAAAABdpcG1hAAAAAAAAAAEAAQQBAoMEAAAAMG1kYXQSAAoIGAAGiAhoNCAyGhlHh4Yhh5555oAAAJBAyRxgkGEETy8OpPuA'; });
 // Tile revision: bumped whenever a tile set is re-uploaded. It changes every URL, so the CDN never serves a tile (or a
 // 404 cached while the upload was still running) from before the upload. R2 ignores the query.
-const TILE_REV = '?r=4';
+const TILE_REV = '?r=5';
 const ext = layer => (AVIF && layer.formats.includes('avif') ? 'avif' : 'webp');
 // Which tiles exist ({base}_index.json from post/tile_index.py): empty tiles are never written, so never ask for them.
 const tileIndex = async layer => {
