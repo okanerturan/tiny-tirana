@@ -17,7 +17,8 @@ import { GEO } from './geo.js';
 const DATA = 'transit/buses.json', SHEET = 'transit/bus', SPRITE_META = { N: 32, CELL: 112, VIEW: 14, length: 8.6 };
 const MPP = GEO.camera.mpp, BUS_M = 12, BUS_LEN_PX = BUS_M / MPP;     // true 12 m bus; camera px
 const HIDE_PAD_DM = 45, FADE_MS = 150, HIDDEN_LINE_ALPHA = 0.5;     // hidden stretches grow by about half a bus; fade time
-const ACTIVE_EVERY_MS = 1500, REDUCED_STEP_MS = 3000, DEMO_START = 8 * 3600, TAP_SLOP = 6;
+const ACTIVE_EVERY_MS = 1500, REDUCED_STEP_MS = 3000, DEMO_START = 12 * 3600,   // demo: noon, busy every day (at 08:00 on a Saturday the first buses were still at the terminals)
+      TAP_SLOP = 6;
 const S2 = Math.SQRT2;
 
 const TXT = {
@@ -477,7 +478,7 @@ export function initBuses({ viewer, item, button, chip, origin, lang: getLang })
   (document.querySelector('.shell') || document.body).append(panel);
   const credit = document.createElement('span'); credit.className = 'bus-credit'; credit.hidden = true;   // CC BY-SA attribution while buses are on
   document.querySelector('.attr')?.append(credit);
-  const setCredit = () => { credit.innerHTML = ` · <span class="long">${esc(tx('credit'))}</span><span class="short">${esc(tx('creditShort'))}</span>`; };
+  const setCredit = () => { credit.innerHTML = `<span class="long">${esc(tx('credit'))}</span><span class="short">${esc(tx('creditShort'))}</span>`; };
 
   function routeDay(ymd) {                              // per line: the day's trips grouped by direction (headsign), busiest first
     const d = day(ymd);

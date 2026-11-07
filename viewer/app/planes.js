@@ -9,7 +9,8 @@ import { GEO } from './geo.js';
 
 const FT = 0.3048, KT = 0.514444, SQUASH = Math.SQRT1_2;           // ground plane is squashed by sin(45 deg) on screen
 const GROUND_ELLIPSOID = GEO.ground, AIRPORT = GEO.airport;   // ellipsoidal metres of the 3D model (city ground ~146 m; Rinas ~74 m)
-const POLL_MS = 5000, MAX_EXTRAP_S = 25, GRACE_S = 30, CONVERGE_S = 4;
+const POLL_MS = 12000,   // positions are extrapolated in between; 12 s keeps a crowd's Worker requests low
+      MAX_EXTRAP_S = 25, GRACE_S = 30, CONVERGE_S = 4;
 
 const visHeight = agl => agl <= 150 ? agl : 150 + 450 * (1 - Math.exp(-(agl - 150) / 2500));   // true near the ground, ~600 m max drawn height
 const groundElev = (lat, lon) => (Math.hypot(lat - AIRPORT.lat, (lon - AIRPORT.lon) * 0.75) < 0.03 ? AIRPORT.elev : GROUND_ELLIPSOID);
@@ -129,7 +130,7 @@ export function initPlanes({ viewer, item, imgAt, t, lang, button, chip }) {
     button.setAttribute('aria-pressed', String(on));
     const n = lastCount;
     chip.hidden = !on;
-    chip.textContent = !on ? '' : lastSource === 'demo' ? t('planesDemo').replace('{n}', n) : n ? t('planesLive').replace('{n}', n) : t('planesNone');
+    chip.textContent = !on ? '' : lastSource === 'demo' ? t('planesDemo').replace('{n}', n) : n === 1 ? t('planesLive1') : n ? t('planesLive').replace('{n}', n) : t('planesNone');
   }
   function setOn(v) {
     on = v;

@@ -21,7 +21,7 @@ export function initPresence({ el, t, lang }) {
   };
   // a visit is counted once per tab session
   const newVisit = () => { try { if (sessionStorage.getItem('tt-counted')) return false; sessionStorage.setItem('tt-counted', '1'); return true; } catch { return true; } };
-  ping(); setInterval(() => { if (!document.hidden) ping(); }, 30000);
+  ping(); setInterval(() => { if (!document.hidden) ping(); }, 60000);   // light on the Worker: a Reddit-sized crowd stays in the free tier
   document.addEventListener('visibilitychange', () => { if (!document.hidden) ping(); });
   addEventListener('pagehide', () => ping(true));
   return { render };

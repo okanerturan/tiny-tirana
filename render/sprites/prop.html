@@ -1,0 +1,69 @@
+<!doctype html><meta charset="utf-8"><body style="margin:0;background:transparent">
+<script type="importmap">{"imports":{"three":"http://sprites.local/three/three.module.js"}}</script>
+<script type="module">
+import * as THREE from 'three';
+// Play-mode plane: a Cessna-172-like high-wing single prop, soft-shaded with a thin ink line.
+// Sheet: column = heading (N), row = attitude: rows 0..P-1 pitch 0, 360/P, ... (a full loop, nose up first);
+// row P = banked right, row P+1 = banked left (level). World: x east, y up, z south; nose along -z before yaw.
+const N = 32, P = 16, CELL = 128, VIEW = 50, BANK = 32 * Math.PI / 180;
+const r = new THREE.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true });
+r.setPixelRatio(1); r.setSize(CELL, CELL); r.setClearColor(0, 0); r.outputColorSpace = THREE.SRGBColorSpace;
+const scene = new THREE.Scene();
+const std = (c, rough = 0.55, metal = 0.05) => new THREE.MeshStandardMaterial({ color: c, roughness: rough, metalness: metal });
+const ink = new THREE.MeshBasicMaterial({ color: '#2e2a28', side: THREE.BackSide });
+function outlined(geo, mat, s = 0.32) {
+  const g = new THREE.Group(); g.add(new THREE.Mesh(geo, mat));
+  geo.computeBoundingBox(); const b = geo.boundingBox, sz = new THREE.Vector3(), c = new THREE.Vector3(); b.getSize(sz); b.getCenter(c);
+  const o = new THREE.Mesh(geo, ink); o.scale.set(1 + 2 * s / Math.max(sz.x, .01), 1 + 2 * s / Math.max(sz.y, .01), 1 + 2 * s / Math.max(sz.z, .01));
+  o.position.set(-c.x * (o.scale.x - 1), -c.y * (o.scale.y - 1), -c.z * (o.scale.z - 1)); g.add(o); return g;
+}
+function plane() {
+  const A = new THREE.Group(), white = std('#f4f2ec'), red = std('#c8372d'), navy = std('#24324a'), dark = std('#33383f', 0.7), glass = std('#7d9bb3', 0.15, 0.3), tyre = std('#222326', 0.9);
+  // slender fuselage: round nose, cabin, long tapering tail cone (length ~26 units, span 34: a 172's 8.3 m / 11 m)
+  const prof = [[0, -12.6], [1.3, -12.3], [2.2, -11.2], [2.6, -9], [2.75, -5], [2.7, -1], [2.3, 3], [1.6, 7.5], [1.0, 11], [0.6, 13], [0, 13.3]];
+  const body = new THREE.LatheGeometry(prof.map(([q, z]) => new THREE.Vector2(q, z)), 20); body.rotateX(Math.PI / 2); body.rotateX(Math.PI);
+  body.scale(1, 1.12, 1); A.add(outlined(body, white));
+  const stripe = new THREE.LatheGeometry([[2.78, -10.5], [2.74, 2.5], [2.36, 8]].map(([q, z]) => new THREE.Vector2(q, z)), 20, Math.PI * 0.64, Math.PI * 0.72);
+  stripe.rotateX(-Math.PI / 2); const sm = new THREE.Mesh(stripe, red); sm.scale.set(1.01, 1.13, 1); sm.position.y = -0.55; A.add(sm);
+  const cab = new THREE.SphereGeometry(2.45, 18, 12, 0, Math.PI * 2, 0, Math.PI * 0.45); const cm = new THREE.Mesh(cab, glass); cm.scale.set(1.04, 0.85, 2.0); cm.position.set(0, 1.55, -5.4); A.add(cm);
+  // wing: tapered outer panels, slight dihedral, red tips
+  const wingShape = side => { const q = [[0, 0], [17, 0.6], [17, 4.3], [0, 5.1]].map(([x, y]) => new THREE.Vector2(side * x, y)); return new THREE.Shape(side > 0 ? q : q.reverse()); };
+  for (const side of [1, -1]) {
+    const w = new THREE.ExtrudeGeometry(wingShape(side), { depth: 0.55, bevelEnabled: false }); w.rotateX(Math.PI / 2);   // mirrored outline, not a negative scale (that turns faces inside out)
+    const wm = outlined(w, white); wm.position.set(0, 3.55, -7.3); wm.rotation.z = side * 0.03; A.add(wm);
+    const tip = new THREE.BoxGeometry(1.2, 0.6, 3.7); const tm = new THREE.Mesh(tip, red); tm.position.set(side * 16.5, 3.8, -5.15); A.add(tm);
+    const strut = new THREE.CylinderGeometry(0.16, 0.16, 7.6, 6); const s = new THREE.Mesh(strut, dark); s.position.set(side * 4.6, 0.6, -4.9); s.rotation.z = side * 1.02; A.add(s);
+    const leg = new THREE.CylinderGeometry(0.22, 0.18, 3.6, 6); const l = new THREE.Mesh(leg, dark); l.position.set(side * 2.6, -3.2, -3.6); l.rotation.z = side * 0.6; A.add(l);
+    const wh = new THREE.CylinderGeometry(0.9, 0.9, 0.6, 14); wh.rotateZ(Math.PI / 2); const wmh = new THREE.Mesh(wh, tyre); wmh.position.set(side * 3.7, -4.7, -3.6); A.add(wmh);
+    const fair = new THREE.SphereGeometry(1, 10, 8); fair.scale(0.55, 0.75, 1.5); const fm = new THREE.Mesh(fair, white); fm.position.set(side * 3.7, -4.5, -3.6); A.add(fm);
+  }
+  const nl = new THREE.CylinderGeometry(0.2, 0.2, 2.6, 6); const nlm = new THREE.Mesh(nl, dark); nlm.position.set(0, -3.4, -10.4); A.add(nlm);
+  const nw = new THREE.CylinderGeometry(0.75, 0.75, 0.5, 12); nw.rotateZ(Math.PI / 2); const nwm = new THREE.Mesh(nw, tyre); nwm.position.set(0, -4.6, -10.4); A.add(nwm);
+  // tail: tapered stabiliser and a swept fin, navy and red
+  const stab = new THREE.ExtrudeGeometry(new THREE.Shape([[-6.2, 0], [6.2, 0], [5.2, 2.6], [-5.2, 2.6]].map(([x, y]) => new THREE.Vector2(x, y))), { depth: 0.4, bevelEnabled: false });
+  stab.rotateX(Math.PI / 2); const stm = outlined(stab, white); stm.position.set(0, 0.9, 10.4); A.add(stm);
+  const fin = new THREE.ExtrudeGeometry(new THREE.Shape([[0, 0], [5.6, 0], [5.0, 6.0], [2.9, 6.1]].map(([x, y]) => new THREE.Vector2(x, y))), { depth: 0.45, bevelEnabled: false });
+  fin.rotateY(-Math.PI / 2); const fnm = outlined(fin, navy); fnm.position.set(0.22, 1.4, 7.6); A.add(fnm);
+  const finStripe = new THREE.BoxGeometry(0.5, 0.9, 3.6); const fs = new THREE.Mesh(finStripe, red); fs.position.set(0, 4.3, 10.6); fs.rotation.x = -0.35; A.add(fs);
+  // engine: cowling, spinner, a spinning-prop disc and one blurred blade
+  const spin = new THREE.ConeGeometry(0.9, 1.9, 14); spin.rotateX(-Math.PI / 2); const sp = new THREE.Mesh(spin, red); sp.position.set(0, -0.1, -13.4); A.add(sp);
+  const disc = new THREE.Mesh(new THREE.CircleGeometry(5.0, 36), new THREE.MeshBasicMaterial({ color: '#c9cfd6', transparent: true, opacity: 0.22, side: THREE.DoubleSide, depthWrite: false }));
+  disc.position.set(0, -0.1, -13.5); A.add(disc);
+  const blade = new THREE.BoxGeometry(0.45, 9.6, 0.22); const bl = new THREE.Mesh(blade, dark); bl.position.set(0, -0.1, -13.45); bl.rotation.z = 0.6; A.add(bl);
+  const P0 = new THREE.Group(), Q = new THREE.Group(); Q.add(A); P0.add(Q); P0.rotation.order = 'YXZ'; return P0;
+}
+scene.add(new THREE.HemisphereLight('#f4f7ff', '#7d6f62', 1.5));
+const sun = new THREE.DirectionalLight('#fff4e0', 2.6); sun.position.set(-30, 60, -10); scene.add(sun);
+const fill = new THREE.DirectionalLight('#dfe8ff', 0.6); fill.position.set(40, 20, 30); scene.add(fill);
+const cam = new THREE.OrthographicCamera(-VIEW / 2, VIEW / 2, VIEW / 2, -VIEW / 2, 0.1, 500);
+const h = 315 * Math.PI / 180, t = 45 * Math.PI / 180;
+const dir = new THREE.Vector3(Math.sin(h) * Math.cos(t), -Math.sin(t), -Math.cos(h) * Math.cos(t));
+cam.position.copy(dir.clone().multiplyScalar(-200)); cam.up.set(0, 1, 0); cam.lookAt(0, 0, 0);
+const ROWS = P + 2, sheet = document.createElement('canvas'); sheet.width = N * CELL; sheet.height = ROWS * CELL; const sx = sheet.getContext('2d');
+const Pl = plane(); scene.add(Pl);
+for (let row = 0; row < ROWS; row++) for (let i = 0; i < N; i++) {
+  Pl.rotation.set(row < P ? row * 2 * Math.PI / P : 0, -i * 2 * Math.PI / N, row === P ? -BANK : row === P + 1 ? BANK : 0);
+  r.render(scene, cam); sx.drawImage(r.domElement, i * CELL, row * CELL);
+}
+window.__sheet = sheet.toDataURL('image/png'); window.__meta = { N, P, CELL, VIEW, SPAN: 34, rows: ROWS };
+</script>

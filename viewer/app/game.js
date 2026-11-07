@@ -46,6 +46,13 @@ export function initGame({ viewer, item, origin, t, button, landmarks, nm, toCam
   const cv = document.createElement('canvas'); cv.className = 'game-layer'; cv.setAttribute('aria-hidden', 'true');
   const ctx = cv.getContext('2d'); viewer.canvas.append(cv);
   const hud = document.createElement('div'); hud.className = 'game-hud'; hud.hidden = true;
+  // act on pointerdown: a tap's click never arrives if the button was replaced between finger down and up (phones)
+  hud.addEventListener('pointerdown', e => {
+    const b = e.target.closest?.('button'); if (!b) return; e.preventDefault(); e.stopPropagation();
+    if (b.classList.contains('g-exit') || b.dataset.a === 'exit') stop();
+    else if (b.classList.contains('g-mute')) toggleMute();
+    else if (b.dataset.a === 'again' && data.C) R = newRace(data.C);
+  });
   const pad = document.createElement('div'); pad.className = 'game-pad'; pad.hidden = true;
   const menu = document.createElement('div'); menu.className = 'game-menu panel'; menu.hidden = true;
   document.querySelector('.shell').append(hud, pad, menu);
@@ -87,11 +94,11 @@ export function initGame({ viewer, item, origin, t, button, landmarks, nm, toCam
     if (data) return data;
     const [roads, meta, sheet] = await Promise.all([fetch('life/roads.json').then(r => r.json()), fetch('life/cars.json').then(r => r.json()),
       new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = rej; i.src = 'life/cars.webp'; })]);
-    const plane = await new Promise(res => { const i = new Image(); i.onload = () => res(i); i.onerror = () => res(null); i.src = 'planes/sheet.webp'; });
+    const plane = await new Promise(res => { const i = new Image(); i.onload = () => res(i); i.onerror = () => res(null); i.src = 'planes/prop.webp'; });   // the toy single-prop (render/sprites/prop.html)
     let shadow = null;
-    if (plane) { shadow = document.createElement('canvas'); shadow.width = plane.width; shadow.height = plane.height; const g = shadow.getContext('2d');
+    if (plane) { shadow = document.createElement('canvas'); shadow.width = plane.width; shadow.height = 128; const g = shadow.getContext('2d');   // level row only
       g.drawImage(plane, 0, 0); g.globalCompositeOperation = 'source-in'; g.fillStyle = 'rgb(12, 20, 30)'; g.fillRect(0, 0, shadow.width, shadow.height); }
-    return (data = { roads, CAR: meta.car, sheet, plane, shadow, PL: { N: 32, CELL: 192, VIEW: 50 } });
+    return (data = { roads, CAR: meta.car, sheet, plane, shadow, PL: { N: 32, P: 16, CELL: 128, VIEW: 50, SPAN: 34 } });
   }
 
   // ---------- circuit (the racing line) ----------
@@ -219,7 +226,7 @@ export function initGame({ viewer, item, origin, t, button, landmarks, nm, toCam
   function hudTop(inner) {
     return `<div class="g-top">${inner}<button type="button" class="g-mute" aria-label="${t('gSound')}">${snd.muted ? '🔇' : '🔊'}</button><button type="button" class="g-exit" aria-label="${t('close')}">✕</button></div>`;
   }
-  function bindTop() { hud.querySelector('.g-exit').onclick = stop; hud.querySelector('.g-mute').onclick = () => { toggleMute(); }; }
+  function bindTop() {}   // the HUD is rebuilt every few frames: its buttons are handled by one pointerdown listener on the HUD (see below)
   function raceHud() {
     const me = R.me, lap = Math.max(1, Math.min(LAPS, me.lap)); let best = null; try { best = Number(localStorage.getItem('tt-race-best')) || null; } catch {}
     hud.innerHTML = hudTop(`<span>${t('gLap')} <b>${lap}/${LAPS}</b></span><span>${t('gPos')} <b>${place()}/4</b></span><span><b>${fmtT(Math.max(0, R.t))}</b></span><span class="g-best">${t('gBest')} ${fmtT(best)}</span>`)
@@ -240,24 +247,54 @@ export function initGame({ viewer, item, origin, t, button, landmarks, nm, toCam
 
   // ---------- fly ----------
   let F = null;
-  function newFlight() { const [u, v] = toCamera(41.3275, 19.8187); return { u, v, th: -Math.PI / 4, sp: 55, alt: 140, trail: [], over: null, bank: 0, livery: Math.floor(Math.random() * 3) }; }
+  // A light, forgiving flight model: throttle sets the cruise speed, climbing trades speed for height and diving the
+  // reverse; turns bank the wings. It cannot crash: near the ground it pulls itself up, and when too slow the nose drops.
+  // Space (or the ⟲ button) flies a loop: a vertical circle that climbs first, so it is always safe.
+  const G = 9.81, ALT_MIN = 40, ALT_SAFE = 90, ALT_MAX = 1500, V_STALL = 22, V_MAX = 88, LOOP_R = 55;
+  function newFlight() { const [u, v] = toCamera(41.3275, 19.8187);
+    return { u, v, th: -Math.PI / 4, sp: 46, alt: 160, gam: 0, thr: 0.6, trail: [], over: null, bank: 0, loop: null, msg: null, spaceWas: false }; }
+  const say = (txt, ms = 1300) => { F.msg = { txt, until: performance.now() + ms }; };
   function stepFly(dt) {
     const turn = (held('ArrowLeft', 'a') ? -1 : 0) + (held('ArrowRight', 'd') ? 1 : 0);
-    if (held('ArrowUp', 'w')) F.sp = Math.min(95, F.sp + 25 * dt); if (held('ArrowDown', 's')) F.sp = Math.max(30, F.sp - 25 * dt);
-    F.th += turn * 0.9 * dt; F.bank += (turn - F.bank) * Math.min(1, dt * 4);
-    [F.u, F.v] = step(F.u, F.v, F.th, F.sp * dt);
+    const pitch = (held('ArrowUp') ? 1 : 0) - (held('ArrowDown') ? 1 : 0);
+    if (held('w')) F.thr = Math.min(1, F.thr + 0.6 * dt); if (held('s')) F.thr = Math.max(0.15, F.thr - 0.6 * dt);
+    const space = held(' ');
+    if (space && !F.spaceWas && !F.loop) { F.loop = { ph: 0, sp0: Math.max(F.sp, 62) }; F.sp = F.loop.sp0; F.gam = 0; say(t('gLoop')); snd.beep(880, 0.1, 'triangle', 0.08); track('game', { mode: 'fly', loop: 1 }); }
+    F.spaceWas = space;
+    let adv;
+    if (F.loop) {                                   // the loop: pitch angle = phase, energy sets the speed
+      const L = F.loop; F.sp = Math.max(24, Math.sqrt(Math.max(0, L.sp0 * L.sp0 - 2 * G * LOOP_R * (1 - Math.cos(L.ph)))));
+      const dph = F.sp / LOOP_R * dt; L.ph += dph; F.gam = L.ph;
+      F.alt += F.sp * Math.sin(L.ph) * dt; adv = F.sp * Math.cos(L.ph) * dt;
+      if (L.ph >= 2 * Math.PI) { F.loop = null; F.gam = 0; }
+      F.bank += (0 - F.bank) * Math.min(1, dt * 4);
+    } else {
+      let want = pitch * 0.33;                      // ~19 degrees climb or dive
+      if (F.alt < ALT_SAFE) { want = Math.max(want, (ALT_SAFE - F.alt) / ALT_SAFE * 0.3); if (pitch < 0 && !F.msg) say(t('gPullUp'), 900); }
+      if (F.alt > ALT_MAX) want = Math.min(want, 0);
+      if (F.sp < V_STALL) { want = Math.min(want, -0.2); if (!F.msg) say(t('gStall'), 900); }
+      F.gam += (want - F.gam) * Math.min(1, dt * 2.2);
+      const acc = F.thr * 9 - 9 * (F.sp / 62) ** 2 - G * Math.sin(F.gam) * 0.8;
+      F.sp = Math.min(V_MAX, Math.max(18, F.sp + acc * dt));
+      F.alt += F.sp * Math.sin(F.gam) * dt; adv = F.sp * Math.cos(F.gam) * dt;
+      F.th += turn * 0.62 * dt; F.bank += (turn - F.bank) * Math.min(1, dt * 3);
+    }
+    F.alt = Math.max(ALT_MIN, F.alt);
+    [F.u, F.v] = step(F.u, F.v, F.th, adv);
     const it = item(), sz = it.getContentSize(), x = F.u - origin[0], y = F.v - origin[1];
-    if (x < 2000 || y < 2000 || x > sz.x - 2000 || y > sz.y - 2000) { const want = Math.atan2((origin[1] + sz.y / 2 - F.v) / SQ, origin[0] + sz.x / 2 - F.u);
+    if (!F.loop && (x < 2000 || y < 2000 || x > sz.x - 2000 || y > sz.y - 2000)) { const want = Math.atan2((origin[1] + sz.y / 2 - F.v) / SQ, origin[0] + sz.x / 2 - F.u);
       let d = want - F.th; while (d > Math.PI) d -= 2 * Math.PI; while (d < -Math.PI) d += 2 * Math.PI; F.th += Math.sign(d) * Math.min(Math.abs(d), 1.2 * dt); }
-    F.trail.push([F.u, F.v]); if (F.trail.length > 70) F.trail.shift();
+    F.trail.push([F.u, F.v, F.alt]); if (F.trail.length > 110) F.trail.shift();
     let best = null, bd = 260 * 260;
     for (const p of landmarks()) { const [pu, pv] = toCamera(p.lat, p.lon); const d = ((pu - F.u) * MPP) ** 2 + ((pv - F.v) * MPP / SQ) ** 2; if (d < bd) { bd = d; best = p; } }
     if (best !== F.over) { F.over = best; if (best) { snd.beep(784, 0.12, 'triangle', 0.08); track('game', { mode: 'fly', over: best.id }); } }
-    snd.rev((F.sp - 30) / 65, 'plane');
+    if (F.msg && performance.now() > F.msg.until) F.msg = null;
+    snd.rev((F.sp - 20) / 60, 'plane');
   }
   function flyHud() {
-    hud.innerHTML = hudTop(`<span>✈️ <b>${Math.round(F.sp * 3.6)}</b> km/h</span><span>${t('gAlt')} <b>${F.alt} m</b></span>`)
-      + (F.over ? `<div class="g-call g-over">${t('gOver')} ${nm(F.over)}</div>` : '') + (performance.now() - F.t0 < 4000 ? `<div class="g-help">${t('gFlyKeys')}</div>` : '');
+    hud.innerHTML = hudTop(`<span>✈️ <b>${Math.round(F.sp * 3.6)}</b> km/h</span><span><i class="g-lbl">${t('gAlt')}</i> <b>${Math.round(F.alt)} m</b></span>`)
+      + (F.msg ? `<div class="g-call">${F.msg.txt}</div>` : '')
+      + (F.over && !F.msg ? `<div class="g-call g-over">${t('gOver')} ${nm(F.over)}</div>` : '') + (performance.now() - F.t0 < 4000 ? `<div class="g-help">${t('gFlyKeys')}</div>` : '');
     bindTop();
   }
 
@@ -285,15 +322,18 @@ export function initGame({ viewer, item, origin, t, button, landmarks, nm, toCam
         if (c.me) { ctx.fillStyle = '#fff'; ctx.strokeStyle = 'rgba(0,0,0,0.5)'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(x, y - size * 0.62); ctx.lineTo(x - 7, y - size * 0.62 - 10); ctx.lineTo(x + 7, y - size * 0.62 - 10); ctx.closePath(); ctx.fill(); ctx.stroke(); } }
     }
     if (mode === 'fly' && F) {
-      const { plane, shadow, PL } = data, m = k / MPP, lift = F.alt * SQ / MPP * k * 0.35;
-      const cell = Math.max(96, 44 * m) * PL.VIEW / 34;                                 // a toy ~44 m wingspan, never tiny
-      const bearing = ((45 + F.th * DEG) % 360 + 360) % 360, f = Math.round(bearing / (360 / PL.N)) % PL.N;
+      const { plane, shadow, PL } = data, m = k / MPP, up = SQ / MPP * k;            // screen px per metre of height
+      const cell = Math.max(88, 16 * m) * PL.VIEW / PL.SPAN;                            // ~16 m span (a 172 is 11 m), never smaller than ~60 px
+      const bearing = ((45 + F.th * DEG) % 360 + 360) % 360, col = Math.round(bearing / (360 / PL.N)) % PL.N;
+      const prow = ((Math.round(F.gam / (2 * Math.PI / PL.P)) % PL.P) + PL.P) % PL.P;
+      const row = prow === 0 && Math.abs(F.bank) > 0.45 ? PL.P + (F.bank > 0 ? 0 : 1) : prow;
       const gx = ox + F.u * k, gy = oy + F.v * k;
-      ctx.strokeStyle = 'rgba(255,255,255,0.6)'; ctx.lineWidth = 2.5; ctx.lineCap = 'round'; ctx.beginPath();
-      F.trail.forEach(([u, v], i) => { const x = ox + u * k, y = oy + v * k - lift; i ? ctx.lineTo(x, y) : ctx.moveTo(x, y); }); ctx.stroke();
+      if (F.trail.length > 1) { ctx.strokeStyle = 'rgba(255,255,255,0.55)'; ctx.lineWidth = 2; ctx.lineCap = 'round'; ctx.lineJoin = 'round'; ctx.beginPath();
+        F.trail.forEach(([u, v, a], i) => { const x = ox + u * k, y = oy + v * k - a * up; i ? ctx.lineTo(x, y) : ctx.moveTo(x, y); }); ctx.stroke(); }
       if (plane) {
-        ctx.globalAlpha = 0.38; ctx.drawImage(shadow, f * PL.CELL, 0, PL.CELL, PL.CELL, gx - cell / 2, gy - cell / 2 * SQ, cell, cell * SQ); ctx.globalAlpha = 1;
-        ctx.drawImage(plane, f * PL.CELL, F.livery * PL.CELL, PL.CELL, PL.CELL, gx - cell / 2, gy - lift - cell / 2, cell, cell);
+        const sa = Math.max(0.12, 0.4 - F.alt / 2500);                                   // the shadow fades with height
+        ctx.globalAlpha = sa; ctx.drawImage(shadow, col * PL.CELL, 0, PL.CELL, PL.CELL, gx - cell / 2, gy - cell / 2 * SQ, cell, cell * SQ); ctx.globalAlpha = 1;
+        ctx.drawImage(plane, col * PL.CELL, row * PL.CELL, PL.CELL, PL.CELL, gx - cell / 2, gy - F.alt * up - cell / 2, cell, cell);
       }
     }
   }
@@ -302,13 +342,15 @@ export function initGame({ viewer, item, origin, t, button, landmarks, nm, toCam
     raf = 0; if (!mode) return;
     const dt = Math.min(0.05, lastT ? (ts - lastT) / 1000 : 0); lastT = ts;
     if (mode === 'race') { if (!R.showing) { stepRace(dt); raceHud(); } const me = R.me; follow(...step(me.u, me.v, me.th, Math.max(0, me.sp) * 0.9)); }
-    else { stepFly(dt); flyHud(); follow(...step(F.u, F.v, F.th, 120)); }
+    else { stepFly(dt); flyHud(); const [au, av] = step(F.u, F.v, F.th, F.loop ? 0 : 90); follow(au, av - F.alt * SQ / MPP * 0.85);
+      const it = item(), z = it.viewportToImageZoom(viewer.viewport.getZoom()), zc = Math.min(0.75, Math.max(0.07, z));   // pinch / wheel zoom, within limits
+      if (zc !== z) viewer.viewport.zoomTo(it.imageToViewportZoom(zc), null, true); }
     draw(); raf = requestAnimationFrame(loop);
   }
   async function start(m) {
     try { await load(); } catch (e) { console.warn('[game]', e); return; }
     mode = m; keys.clear(); lastT = 0; document.body.classList.add('playing'); button.setAttribute('aria-pressed', 'true');
-    viewer.setMouseNavEnabled(false); hud.hidden = false; pad.hidden = false; resize(); snd.engine(true, m === 'race' ? 'car' : 'plane');
+    viewer.setMouseNavEnabled(m === 'fly'); viewer.panHorizontal = viewer.panVertical = m !== 'fly'; hud.hidden = false; pad.hidden = false; resize(); snd.engine(true, m === 'race' ? 'car' : 'plane');
     const it = item();
     if (m === 'race') {
       data.C ??= buildCircuit(data.roads); R = newRace(data.C);
@@ -316,7 +358,7 @@ export function initGame({ viewer, item, origin, t, button, landmarks, nm, toCam
       viewer.viewport.zoomTo(it.imageToViewportZoom(0.72), null, true); follow(R.me.u, R.me.v);
     } else {
       F = newFlight(); F.t0 = performance.now();
-      pad.innerHTML = `<div class="g-steer">${padBtn('↺', 'ArrowLeft')}${padBtn('↻', 'ArrowRight')}</div><div class="g-pedals">${padBtn('−', 'ArrowDown')}${padBtn('+', 'ArrowUp', 'gas')}</div>`;
+      pad.innerHTML = `<div class="g-steer">${padBtn('↺', 'ArrowLeft')}${padBtn('↻', 'ArrowRight')}</div><div class="g-pedals">${padBtn('▼', 'ArrowDown')}${padBtn(t('gLoopBtn'), ' ', 'boost loop')}${padBtn('▲', 'ArrowUp', 'gas')}</div>`;
       viewer.viewport.zoomTo(it.imageToViewportZoom(0.22), null, true);
     }
     track('game', { mode: m, start: true });
@@ -325,7 +367,7 @@ export function initGame({ viewer, item, origin, t, button, landmarks, nm, toCam
   function stop() {
     mode = null; R = null; F = null; cancelAnimationFrame(raf); raf = 0; keys.clear(); snd.engine(false);
     hud.hidden = true; pad.hidden = true; menu.hidden = true; hud.innerHTML = ''; document.body.classList.remove('playing');
-    button.setAttribute('aria-pressed', 'false'); viewer.setMouseNavEnabled(true);
+    button.setAttribute('aria-pressed', 'false'); viewer.setMouseNavEnabled(true); viewer.panHorizontal = viewer.panVertical = true;
     ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.clearRect(0, 0, cv.width, cv.height);
   }
   addEventListener('resize', () => { if (mode) resize(); });

@@ -75,6 +75,7 @@ body { background: var(--bg); color: var(--fg); font: var(--text-m)/1.4 system-u
 /* --- app shell: the map fills the screen, UI floats above it --- */
 .shell { position: fixed; inset: 0; block-size: 100dvh; overflow: clip; }
 /* OpenSeadragon sets position: relative on its element, so size it explicitly instead of relying on inset */
+.map-base { position: absolute; inset-block-start: 0; inset-inline-start: 0; inline-size: 1696px; max-inline-size: none; block-size: auto; transform-origin: 0 0; will-change: transform; pointer-events: none; user-select: none; image-rendering: auto; }
 #map { position: absolute; inset: 0; inline-size: 100%; block-size: 100%; background: oklch(0.91 0.02 250) image-set(url(clouds.avif) type('image/avif'), url(clouds.webp) type('image/webp')) repeat; }
 .bar {
   position: absolute; inset-inline: 0; inset-block-start: 0; z-index: 2;
@@ -272,16 +273,17 @@ body.hide-lm .lm, body.hide-lm .mm-dot { display: none !important; }   /* OSD se
 .stage[data-show="photo"] .credit.photo, .stage[data-show="diorama"] .credit.diorama,
 .stage[data-show="poster"] .credit.poster, .stage[data-show="map"] .credit.map { opacity: 1; }
 @media (prefers-reduced-motion: no-preference) { .credit { transition: opacity 200ms var(--ease-out); } }
-.stamp { position: absolute; z-index: 2; inset-inline-end: 0.9rem; inset-block-start: 0.8rem; inline-size: 5rem; rotate: 5deg;   /* top: the view tabs run along the bottom */
+.stamp { position: absolute; z-index: 2; inset-inline-end: 0.9rem; inset-block-end: 0.8rem; inline-size: 5rem; rotate: 5deg;   /* bottom right: the close button has the top corner, the view tabs the bottom left */
   background: oklch(0.99 0.005 85); border-radius: 6px; box-shadow: 0 4px 12px oklch(0 0 none / 0.3); padding: 7px;
   -webkit-mask: radial-gradient(circle, transparent 2.8px, #000 3.2px) -4px -4px / 8px 8px round, linear-gradient(#000 0 0) content-box;
   mask: radial-gradient(circle, transparent 2.8px, #000 3.2px) -4px -4px / 8px 8px round, linear-gradient(#000 0 0) content-box; }
 .stamp img { inline-size: 100%; block-size: auto; }
 
 /* text side */
-.card-body { position: relative; display: flex; flex-direction: column; gap: 0.75rem; padding: 1.1rem 1.3rem 1.1rem; min-block-size: 0; }
+.card-body { position: static; display: flex; flex-direction: column; gap: 0.75rem; padding: 1.1rem 1.3rem 1.1rem; min-block-size: 0; }
 .card-body > * { margin: 0; }
-.card-close { position: absolute; inset-block-start: 0.9rem; inset-inline-end: 0.9rem; min-block-size: 2.5rem; min-inline-size: 2.5rem; padding: 0; border-radius: 999px; box-shadow: none; }
+.card-close { position: absolute; z-index: 3; inset-block-start: 1.1rem; inset-inline-end: 1.1rem; min-block-size: 2.5rem; min-inline-size: 2.5rem; padding: 0; border-radius: 999px;   /* the card's top corner, over the picture: where people look for it */
+  background: var(--panel-solid); box-shadow: 0 2px 10px oklch(0 0 none / 0.35); }
 .kind { display: inline-flex; align-self: start; align-items: center; gap: 0.4rem; padding: 0.25rem 0.65rem; border-radius: 999px; font-size: 0.75rem; font-weight: 700;
   letter-spacing: 0.03em; color: var(--accent-ink); background: color-mix(in oklch, var(--accent) 85%, white); }
 .card-body h2 { font-size: clamp(1.45rem, 1.1rem + 1vw, 1.9rem); line-height: 1.1; letter-spacing: -0.015em; padding-inline-end: 2.8rem; margin-block-start: -0.2rem; }
@@ -306,7 +308,7 @@ body.hide-lm .lm, body.hide-lm .mm-dot { display: none !important; }   /* OSD se
   .stage { margin: 0.5rem 0.5rem 0; aspect-ratio: 16 / 9; max-block-size: 30dvh; border-radius: 18px; }
   .stamp { inline-size: 3.8rem; }
   .card-body { padding: 0.9rem 1rem 0.9rem; gap: 0.6rem; }
-  .card-close { inset-block-start: 0.7rem; }
+  .card-close { inset-block-start: 0.95rem; inset-inline-end: 0.95rem; }
   .card-body h2 { font-size: 1.35rem; }
   .desc { font-size: 0.875rem; line-height: 1.5; }
   .facts div { padding: 0.45rem 0.7rem; }
@@ -492,6 +494,8 @@ body:has(.bus-lines:popover-open) .minimap { opacity: 0; pointer-events: none; }
 .pin span { position: absolute; inset-block-end: 150%; inset-inline-start: 50%; translate: -50% 0; padding: 0.2rem 0.5rem; white-space: nowrap; font-size: var(--text-s); font-weight: 600; color: var(--fg); background: var(--panel-solid); border-radius: 6px; box-shadow: var(--shadow); }
 .toast { position: absolute; z-index: 6; inset-inline-start: 50%; inset-block-start: calc(4.75rem + env(safe-area-inset-top, 0px)); translate: -50% 0; padding: 0.55rem 0.9rem; border-radius: 999px; background: var(--panel-solid); box-shadow: var(--shadow); }
 .toast[hidden] { display: none; }
+.toast { z-index: 8; }
+body.playing .toast { inset-block-start: calc(9rem + env(safe-area-inset-top, 0px)); }   /* clear of the flight HUD, which used to hide it */
 @media (width < 40rem) { .toast { inset-block-start: calc(11rem + env(safe-area-inset-top, 0px)); } }   /* below the bar and the strip */
 .sr { position: absolute; inline-size: 1px; block-size: 1px; overflow: clip; clip-path: inset(50%); white-space: nowrap; }
 
@@ -582,7 +586,10 @@ body:has(#q:focus) .lm-strip-wrap, body:has(.results:not([hidden])) .lm-strip-wr
 body.playing .lm-strip-wrap, body.playing .corner, body.playing .bar .search, body.playing .lm, body.playing #card { display: none !important; }
 .game-hud { position: absolute; inset: 0; z-index: 6; pointer-events: none; font-variant-numeric: tabular-nums; }
 .game-hud .g-top { position: absolute; inset-block-start: calc(4.6rem + env(safe-area-inset-top, 0px)); inset-inline-start: 50%; translate: -50% 0; display: flex; align-items: center; gap: 0.9rem;
-  padding: 0.45rem 0.55rem 0.45rem 1rem; border-radius: 999px; background: var(--panel-solid); box-shadow: var(--shadow); white-space: nowrap; pointer-events: auto; font-size: 0.9rem; }
+  padding: 0.45rem 0.55rem 0.45rem 1rem; border-radius: 999px; background: var(--panel-solid); box-shadow: var(--shadow); pointer-events: auto; font-size: 0.9rem;
+  max-inline-size: calc(100vw - 1rem); flex-wrap: wrap; justify-content: center; row-gap: 0.2rem; column-gap: 0.7rem; }
+.game-hud .g-top > span { white-space: nowrap; }
+.game-hud .g-top > button { flex-shrink: 0; }   /* on a narrow phone the info wraps; ✕ and sound never leave the screen */
 .game-hud .g-best { color: var(--muted); }
 .g-exit { inline-size: 2rem; block-size: 2rem; border: 0; border-radius: 50%; background: color-mix(in oklch, var(--fg) 10%, transparent); color: inherit; cursor: pointer; }
 .game-hud .g-speed { position: absolute; inset-block-end: calc(var(--gap) + env(safe-area-inset-bottom, 0px)); inset-inline-start: calc(var(--gap) + env(safe-area-inset-left, 0px));
@@ -609,9 +616,20 @@ body.playing .lm-strip-wrap, body.playing .corner, body.playing .bar .search, bo
 body.playing .buses-layer, body.playing .life-layer, body.playing .cable-layer, body.playing .planes-layer, body.playing .side > .btn:not(#playBtn), body.playing .minimap { display: none !important; }
 .game-menu button { display: grid; gap: 0.1rem; } .game-menu small { font-weight: 400; color: var(--muted); font-size: 0.78rem; }
 .g-mute { inline-size: 2rem; block-size: 2rem; border: 0; border-radius: 50%; background: color-mix(in oklch, var(--fg) 10%, transparent); cursor: pointer; }
+@media (pointer: coarse) { .game-pad .loop { font-size: 0.85rem; font-weight: 700; }
+.game-hud .g-help { display: none; } }   /* keyboard hints mean nothing on a touch screen; the pad is self-explanatory */
+.game-hud .g-lbl { font-style: normal; }
+@media (max-width: 30rem) { .game-hud .g-top { gap: 0.5rem; padding-inline-start: 0.85rem; font-size: 0.85rem; }
+  .game-hud .g-lbl { display: none; } .game-hud .g-lbl + b::before { content: "↑ "; font-weight: 400; } .g-exit, .g-mute { inline-size: 1.9rem; block-size: 1.9rem; } }
 .game-hud .g-help { position: absolute; inset-block-end: 6.5rem; inset-inline: 1rem; text-align: center; color: white; font-weight: 600; text-shadow: 0 2px 10px oklch(0 0 none / 0.7); }
 .game-pad { inset-inline: var(--gap); justify-content: space-between; align-items: flex-end; }
 .game-pad .g-steer, .game-pad .g-pedals { display: flex; gap: 0.6rem; }
+
+/* attribution: each credit is one unbreakable chunk; lines break only between credits, dots drawn between them */
+.attr .c { display: inline-block; white-space: nowrap; }
+.corner .attr { display: flex; flex-wrap: wrap; column-gap: 0.75em; row-gap: 0.05em; }   /* spacing, not dots: a wrapped credit just starts a line */
+.attr .bus-credit .long { display: none !important; } .attr .bus-credit .short { display: inline !important; }
+.attr .bus-credit { display: inline-block; white-space: nowrap; }
 </style>
 </head>
 <body>
@@ -656,7 +674,7 @@ body.playing .buses-layer, body.playing .life-layer, body.playing .cable-layer, 
   <p class="planes-chip" id="planesChip" role="status" hidden></p>
   <div class="buses-chip" id="busesChip" hidden><span class="txt" role="status"></span><button type="button" hidden></button></div>
   <div class="minimap" id="minimapWrap"><div id="minimap" aria-hidden="true"></div></div>
-  <p class="attr"><span data-i18n="attr">Të dhënat e hartës ©2026 Google · © OpenStreetMap</span></p>
+  <p class="attr"><span class="c" data-i18n="attr">Të dhënat e hartës ©2026 Google</span><span class="c">© OpenStreetMap</span></p>
   <div class="toast" id="toast" role="status" hidden></div>
   <aside id="card" class="card" role="dialog" aria-labelledby="cardTitle" hidden></aside>
 </div>

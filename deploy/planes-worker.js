@@ -132,7 +132,7 @@ export class Presence extends DurableObject {
       if (q.get('new') === '1' && !this.seen.has(sid)) { this.total++; await this.ctx.storage.put('total', this.total); }
       if (q.get('bye') === '1') this.seen.delete(sid); else this.seen.set(sid, now);
     }
-    for (const [k, t] of this.seen) if (now - t > 70000) this.seen.delete(k);
+    for (const [k, t] of this.seen) if (now - t > 130000) this.seen.delete(k);   // tabs ping every 60 s
     return Response.json({ live: Math.max(this.seen.size, sid ? 1 : 0), total: this.total });
   }
 }

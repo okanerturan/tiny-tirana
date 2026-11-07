@@ -16,7 +16,8 @@ const ENDPOINT = '/api/e', FLUSH_MS = 15000, MAX_BATCH = 40;
 const q = new URLSearchParams(location.search);
 const optedOut = navigator.globalPrivacyControl === true || navigator.doNotTrack === '1' || window.doNotTrack === '1';
 const devHost = /^(localhost|127\.|0\.0\.0\.0|\[::1\])/.test(location.hostname);
-export const enabled = !optedOut && (!devHost || q.get('analytics') === 'dev');
+// automated browsers (navigator.webdriver: our own live-site tests, crawlers) are not visitors: no events, no visit count
+export const enabled = !optedOut && !navigator.webdriver && (!devHost || q.get('analytics') === 'dev');
 
 let sid = null;
 try { sid = sessionStorage.getItem('tt-sid'); if (!sid) { sid = Math.random().toString(36).slice(2, 10); sessionStorage.setItem('tt-sid', sid); } } catch { sid = 'nosession'; }

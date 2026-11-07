@@ -15,4 +15,5 @@ print('outside the canvas, dropped', n // 2, 'tiles')
 PY
 python3 -I post/dzi_store.py data/stores/shaped_build "$OUT/map" --origin $U0,$V0 --size $W,$H --formats avif,webp > data/heal/dzi_build.log 2>&1
 python3 -I post/tile_index.py "$OUT/map" > /dev/null
+python3 -I post/overview.py "$OUT/map" viewer/app/overview   # the whole-map picture under the tiles (app.js "never an empty view")
 tail -1 data/heal/dzi_build.log; echo BUILD_DONE

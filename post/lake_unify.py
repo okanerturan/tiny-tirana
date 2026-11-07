@@ -30,6 +30,7 @@ def main():
     dark = water & (low_l < DARK_LUM); light = water & ~dark & (dist > 20)
     if '--clean' in a:                                                       # one clean water surface: no lakebed, no submerged trees, no seams
         sh = water & (dist > 6) & (dist < 120); dp = water & (dist > 500)
+        if dp.sum() < 5000: dp = water & (dist > dist[water].max() * 0.6)   # a narrow lake: its middle is the deep tone
         c_sh, c_dp = np.median(img[sh], 0), np.median(img[dp], 0)
         w = np.clip((dist - 20) / 480, 0, 1)[..., None]; w = w * w * (3 - 2 * w)
         base = c_sh * (1 - w) + c_dp * w
