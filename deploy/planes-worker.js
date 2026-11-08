@@ -22,9 +22,28 @@ function normalise(rows, source) {
   return { now: Date.now() / 1000, source, planes };
 }
 
+// Map tiles from R2 through the edge cache, on the site's own origin. Straight from the R2 custom domain, .avif tiles
+// were never cached by Cloudflare (DYNAMIC) and carried no Cache-Control, so every visit fetched every tile from storage
+// again. Tile URLs are versioned (v2/ path + ?r= revision), so they can be cached for a year, at the edge and in browsers.
+const TILE_KEY = /^v\d+\/tiles_shaped\/[\w\/.-]+$/;
+async function tile(request, env, url, ctx) {
+  if (request.method !== 'GET' && request.method !== 'HEAD') return new Response(null, { status: 405 });
+  const cache = caches.default, hit = await cache.match(request);
+  if (hit) return hit;
+  const key = decodeURIComponent(url.pathname.slice(3));
+  if (!TILE_KEY.test(key) || key.includes('..') || !env.TILES) return new Response('Not found', { status: 404 });
+  const obj = await env.TILES.get(key);
+  if (!obj) { const r = new Response('Not found', { status: 404, headers: { 'cache-control': 'public, max-age=600' } }); ctx.waitUntil(cache.put(request, r.clone())); return r; }
+  const h = new Headers(); obj.writeHttpMetadata(h); h.set('etag', obj.httpEtag);
+  h.set('cache-control', 'public, max-age=31536000, immutable'); h.set('access-control-allow-origin', '*');
+  const res = new Response(obj.body, { headers: h }); ctx.waitUntil(cache.put(request, res.clone()));
+  return res;
+}
+
 export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
+    if (url.pathname.startsWith('/t/')) return tile(request, env, url, ctx);
     if (url.pathname === '/api/e') return events(request, env);
     if (url.pathname.startsWith('/api/r2/')) return r2admin(request, env, url);
     if (url.pathname === '/api/presence') return presence(request, env, url);

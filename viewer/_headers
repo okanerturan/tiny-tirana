@@ -1,0 +1,31 @@
+# Cache rules for the static site (Workers static assets read this file from dist/). The page itself (/app/) goes through
+# the Worker and stays revalidated on every load. Map tiles are served by the Worker (/t/*) with their own 1-year header.
+
+# scripts and styles: fresh for 5 min, then the cached copy is used at once while the browser refreshes it in the background
+/app/*.js
+  Cache-Control: public, max-age=300, stale-while-revalidate=86400
+
+# art, sprites, previews, the overview (its URL carries the tile revision): a day, then the same background refresh
+/app/lm/*
+  Cache-Control: public, max-age=86400, stale-while-revalidate=604800
+/app/og/*
+  Cache-Control: public, max-age=86400, stale-while-revalidate=604800
+/app/planes/*
+  Cache-Control: public, max-age=86400, stale-while-revalidate=604800
+/app/life/*
+  Cache-Control: public, max-age=3600, stale-while-revalidate=604800
+/app/transit/*
+  Cache-Control: public, max-age=3600, stale-while-revalidate=604800
+/app/brand/*
+  Cache-Control: public, max-age=86400, stale-while-revalidate=604800
+/app/clouds.*
+  Cache-Control: public, max-age=86400, stale-while-revalidate=604800
+/app/overview.*
+  Cache-Control: public, max-age=86400, stale-while-revalidate=604800
+/world/thumbs/*
+  Cache-Control: public, max-age=86400, stale-while-revalidate=604800
+
+# versioned library: never changes under this name (last, and detaches the *.js rule's header that also matches it)
+/app/vendor/*
+  ! Cache-Control
+  Cache-Control: public, max-age=31536000, immutable

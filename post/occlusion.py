@@ -180,7 +180,14 @@ def line_heights(pts, step_m=None, elevated=False):
         except Exception:
             good = [i for i in range(n) if hs[i] is not None]
             if not good: return [(*P.to_px(la, lo, P.CAM['groundH'] - 9), P.CAM['groundH'] - 9) for la, lo in pts]
-    hi = np.interp(d, [d[i] for i in good], [hs[i] for i in good])     # linear between visible samples, flat beyond the ends
+    hi = np.interp(d, [d[i] for i in good], [hs[i] for i in good])     # linear between visible samples
+    # Beyond the first / last visible sample, follow the terrain with the street's offset from it there. Held flat, a
+    # tree-lined road climbing a hill (no visible street under the canopy) sat at its first visible height, tens of metres
+    # under the hill: cars drove through the fields below it as hidden "underground" silhouettes (Rruga Pasho Hysa, 34 m).
+    if prior is not None and len(good) < n:
+        i0, i1 = good[0], good[-1]; off0 = hs[i0] - prior(*pts[i0]); off1 = hs[i1] - prior(*pts[i1])
+        for i in range(i0): hi[i] = prior(*pts[i]) + off0
+        for i in range(i1 + 1, n): hi[i] = prior(*pts[i]) + off1
     hi = road_profile(d, hi, med_m=24.0 if elevated else 200.0)         # a road's height changes slowly: keep straight streets straight
     out = []
     for (la, lo), h in zip(pts, hi):

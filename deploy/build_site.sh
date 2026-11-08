@@ -5,4 +5,5 @@ rm -rf dist && mkdir -p dist
 cp viewer/index.html dist/
 rsync -a --exclude '.DS_Store' viewer/app dist/
 rsync -a --exclude '.DS_Store' viewer/world dist/
+cp viewer/_headers dist/_headers   # cache rules for the static assets
 echo "dist: $(find dist -type f | wc -l | tr -d ' ') files, $(du -sh dist | cut -f1)"

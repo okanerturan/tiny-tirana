@@ -13,8 +13,8 @@ import { initTiltShift } from './tiltshift.js';
 import { track, trackLooking, trackPerf } from './analytics.js';
 
 const Q = new URLSearchParams(location.search);
-// tiles: R2 (tiles.tirana.fyi, versioned prefix so they can be cached for long) in production, the local folder in development
-const TILE_HOST = /(^|\.)tirana\.fyi$/.test(location.hostname) ? 'https://tiles.tirana.fyi/v2' : '..';   // v2: the wider map (wave 2, 2026-11-07); v1 stays in R2 for rollback
+// tiles: R2 through the Worker's edge cache (/t/v2/..., cached for a year: versioned path + ?r=) in production, the local folder in development
+const TILE_HOST = window.TT_TILES.host;   // set in index.html's head (it also preloads the opening view's tiles)
 const CONFIG = {
   // Baked in so the first tiles can be requested without fetching the .dzi first.
   map: { base: Q.get('tiles') || `${TILE_HOST}/tiles_shaped/map`, width: 108544, height: 100352, tileSize: 512, overlap: 0, formats: ['avif', 'webp'], index: true },   // Tirana-shaped: city + corridor + airport (post/shape.py)
@@ -31,7 +31,7 @@ const PROJ = makeProjection(CONFIG.camera);
 const STR = {
   sq: { search: 'Kërko', searchPh: 'Kërko një vend, rrugë…', goto: 'Shko te', share: 'Ndaj', about: 'Rreth hartës', rotate: 'Rrotullo',
         zoomIn: 'Zmadho', zoomOut: 'Zvogëlo', home: 'E gjithë harta', close: 'Mbyll', copied: 'Lidhja u kopjua',
-        attr: 'Të dhënat e hartës ©2026 Google', noResults: 'Asnjë rezultat', landmarks: 'Pika kryesore', places: 'Vende', loading: 'Duke ngarkuar…', photo: 'Foto', onMap: 'Në këtë hartë', flyHere: 'Shko atje', play: 'Luaj', gRace: 'Gara rreth qendrës', gFly: 'Fluturo me avion', gLap: 'Xhiro', gPos: 'Vendi', gBest: 'Rekordi', gGo: 'Nisu!', gPerfect: 'Nisje perfekte!', gDraft: 'Në erën e tjetrit!', gSpin: 'Shumë shpejt!', gBestLap: 'Xhiro më e mirë', gLastLap: 'Xhiroja e fundit!', gFinished: 'Mbaruat', gYou: 'Ju', gRival: 'Kundërshtar', gAgain: 'Edhe një herë', gGas: 'Gaz', gBrake: 'Frena', gGrass: 'Në bar!', gSound: 'Zëri', gRaceHint: 'Ti drejton: shigjetat ose WASD, Space = turbo', gFlyHint: 'Fluturo mbi qytet', gKeys: '↑ W gaz · ↓ S frena · ← → A D drejto · Space turbo · M zëri', gFlyKeys: '← → kthehu · ↑ ↓ ngjitu / zbrit · W S gazi · Space salto · Esc dil', gLoop: 'Salto!', gLoopBtn: 'Salto', gPullUp: 'Ngrihu!', gStall: 'Shumë ngadalë!', gAlt: 'Lartësia', gOver: 'Mbi', hereNow: 'tani këtu', visits: 'vizita', busLines: 'Linjat e autobusëve', shareHere: 'Shpërndaje', osm: 'Hape në OpenStreetMap', shareView: 'Një hartë izometrike pixel-art e Tiranës', prev: 'E mëparshmja', next: 'Tjetra', artCredit: 'Art: GPT Image 2.6, krijuar për këtë hartë', illustration: 'Ilustrim', views: 'Pamjet', diorama: 'Diorama', poster: 'Poster', landmarksBtn: 'Pikat kryesore', following: 'Duke ndjekur', stopFollow: 'Ndalo', follow: 'Ndiq', unfollow: 'Mos ndiq', aCar: 'një makinë', landmarksOn: 'Pikat kryesore u shfaqën', landmarksOff: 'Pikat kryesore u fshehën', aboutBrand: 'Tiny Tirana: rreth hartës', howLink: 'Si u bë kjo hartë (anglisht) →', planes: 'Avionët live', onGround: 'në tokë', demo: 'demo, jo e vërtetë', planesLive: '✈ {n} avionë live', planesLive1: '✈ 1 avion live', planesNone: '✈ Asnjë avion tani', planesDemo: '✈ {n} avionë demo', buses: 'Autobusët (sipas orarit)', life: 'Makina',
+        attr: 'Të dhënat e hartës ©2026 Google', noResults: 'Asnjë rezultat', landmarks: 'Pika kryesore', places: 'Vende', loading: 'Duke ngarkuar…', photo: 'Foto', onMap: 'Në këtë hartë', flyHere: 'Shko atje', play: 'Luaj', gRace: 'Gara rreth qendrës', gFly: 'Fluturo me avion', gLap: 'Xhiro', gPos: 'Vendi', gBest: 'Rekordi', gGo: 'Nisu!', gPerfect: 'Nisje perfekte!', gDraft: 'Në erën e tjetrit!', gSpin: 'Shumë shpejt!', gBestLap: 'Xhiro më e mirë', gLastLap: 'Xhiroja e fundit!', gFinished: 'Mbaruat', gYou: 'Ju', gRival: 'Kundërshtar', gAgain: 'Edhe një herë', gGas: 'Gaz', gBrake: 'Frena', gGrass: 'Në bar!', gSound: 'Zëri', gRaceHint: 'Ti drejton: shigjetat ose WASD, Space = turbo', gFlyHint: 'Fluturo mbi qytet', gKeys: '↑ W gaz · ↓ S frena · ← → A D drejto · Space turbo · M zëri', gFlyKeys: '← → kthehu · ↑ ↓ ngjitu / zbrit · W S gazi · Space salto · Esc dil', gLoop: 'Salto!', gLoopBtn: 'Salto', gFlyTouch: 'Tërhiq levën: majtas e djathtas kthehet, lart ngjitet, poshtë zbret', gStick: 'Leva e drejtimit', gPullUp: 'Ngrihu!', gStall: 'Shumë ngadalë!', gAlt: 'Lartësia', gOver: 'Mbi', hereNow: 'tani këtu', visits: 'vizita', busLines: 'Linjat e autobusëve', shareHere: 'Shpërndaje', osm: 'Hape në OpenStreetMap', shareView: 'Një hartë izometrike pixel-art e Tiranës', prev: 'E mëparshmja', next: 'Tjetra', artCredit: 'Art: GPT Image 2.6, krijuar për këtë hartë', illustration: 'Ilustrim', views: 'Pamjet', diorama: 'Diorama', poster: 'Poster', landmarksBtn: 'Pikat kryesore', following: 'Duke ndjekur', stopFollow: 'Ndalo', follow: 'Ndiq', unfollow: 'Mos ndiq', aCar: 'një makinë', landmarksOn: 'Pikat kryesore u shfaqën', landmarksOff: 'Pikat kryesore u fshehën', aboutBrand: 'Tiny Tirana: rreth hartës', tipBus: '🚌 Autobusët', tipFly: '✈️ Fluturo', tipLm: '🏛️ Pikat kryesore', tipsLabel: 'Çfarë mund të bësh këtu', howLink: 'Si u bë kjo hartë (anglisht) →', planes: 'Avionët live', onGround: 'në tokë', demo: 'demo, jo e vërtetë', planesLive: '✈ {n} avionë live', planesLive1: '✈ 1 avion live', planesNone: '✈ Asnjë avion tani', planesDemo: '✈ {n} avionë demo', buses: 'Autobusët (sipas orarit)', life: 'Makina',
         kinds: { landmark: 'monument', square: 'shesh', park: 'park', water: 'ujë', neighbourhood: 'lagje', place: 'vend', street: 'rrugë', building: 'ndërtesë' },
         aboutBody: `<p>Një pikturë izometrike pixel-art e qytetit të Tiranës dhe aeroportit të Rinasit, e vizatuar bllok pas blloku nga një model i trajnuar mbi pamjet 3D të qytetit.</p>
           <p>Projekt personal, jo-tregtar. Pikturuar me Qwen-Image 2.1 + LoRA <i>tiranaiso</i>. Gjeometria nga Google Photorealistic 3D Tiles; emrat nga OpenStreetMap.</p>
@@ -40,7 +40,7 @@ const STR = {
           <p class="privacy">Statistika anonime: pa cookies dhe pa të dhëna personale. Numërojmë cilat vende dhe funksione përdoren, sa kohë shihet harta, sa shpejt ngarkohet dhe gabimet e faqes; nga serveri ruhet vetëm shteti, jo adresa IP. Numëruesi “tani këtu” numëron vetëm skedat e hapura. Nëse shfletuesi juaj kërkon të mos ndiqet (Do Not Track / GPC), nuk dërgohet asgjë.</p>` },
   en: { search: 'Search', searchPh: 'Search a place, street…', goto: 'Go to', share: 'Share', about: 'About this map', rotate: 'Rotate',
         zoomIn: 'Zoom in', zoomOut: 'Zoom out', home: 'Whole map', close: 'Close', copied: 'Link copied',
-        attr: 'Map data ©2026 Google', noResults: 'No results', landmarksBtn: 'Landmarks', following: 'Following', stopFollow: 'Stop', follow: 'Follow', unfollow: 'Unfollow', aCar: 'a car', landmarksOn: 'Landmarks shown', landmarksOff: 'Landmarks hidden', landmarks: 'Landmarks', places: 'Places', loading: 'Loading…', photo: 'Photo', onMap: 'On this map', flyHere: 'Fly here', play: 'Play', gRace: 'Race around the centre', gFly: 'Fly a plane', gLap: 'Lap', gPos: 'Pos', gBest: 'Record', gGo: 'Go!', gPerfect: 'Perfect start!', gDraft: 'Slipstream!', gSpin: 'Too fast!', gBestLap: 'Best lap', gLastLap: 'Last lap!', gFinished: 'Finished', gYou: 'You', gRival: 'Rival', gAgain: 'Race again', gGas: 'Gas', gBrake: 'Brake', gGrass: 'On the grass!', gSound: 'Sound', gRaceHint: 'You steer: arrows or WASD, Space = turbo', gFlyHint: 'Fly over the city', gKeys: '↑ W gas · ↓ S brake · ← → A D steer · Space turbo · M sound', gFlyKeys: '← → turn · ↑ ↓ climb / dive · W S throttle · Space loop · Esc exit', gLoop: 'Loop!', gLoopBtn: 'Loop', gPullUp: 'Pull up!', gStall: 'Too slow!', gAlt: 'Altitude', gOver: 'Over', hereNow: 'here now', visits: 'visits', busLines: 'Bus lines and timetable', shareHere: 'Share', osm: 'Open in OpenStreetMap', shareView: 'An isometric pixel-art map of Tirana', prev: 'Previous', next: 'Next', artCredit: 'Art: GPT Image 2.6, made for this map', illustration: 'Illustration', views: 'Views', diorama: 'Diorama', poster: 'Poster', aboutBrand: 'Tiny Tirana: about this map', howLink: 'How this map was made →', planes: 'Live planes', onGround: 'on the ground', demo: 'demo, not real', planesLive: '✈ {n} live planes', planesLive1: '✈ 1 live plane', planesNone: '✈ No planes right now', planesDemo: '✈ {n} demo planes', buses: 'Buses (timetable)', life: 'Cars',
+        attr: 'Map data ©2026 Google', noResults: 'No results', landmarksBtn: 'Landmarks', following: 'Following', stopFollow: 'Stop', follow: 'Follow', unfollow: 'Unfollow', aCar: 'a car', landmarksOn: 'Landmarks shown', landmarksOff: 'Landmarks hidden', landmarks: 'Landmarks', places: 'Places', loading: 'Loading…', photo: 'Photo', onMap: 'On this map', flyHere: 'Fly here', play: 'Play', gRace: 'Race around the centre', gFly: 'Fly a plane', gLap: 'Lap', gPos: 'Pos', gBest: 'Record', gGo: 'Go!', gPerfect: 'Perfect start!', gDraft: 'Slipstream!', gSpin: 'Too fast!', gBestLap: 'Best lap', gLastLap: 'Last lap!', gFinished: 'Finished', gYou: 'You', gRival: 'Rival', gAgain: 'Race again', gGas: 'Gas', gBrake: 'Brake', gGrass: 'On the grass!', gSound: 'Sound', gRaceHint: 'You steer: arrows or WASD, Space = turbo', gFlyHint: 'Fly over the city', gKeys: '↑ W gas · ↓ S brake · ← → A D steer · Space turbo · M sound', gFlyKeys: '← → turn · ↑ ↓ climb / dive · W S throttle · Space loop · Esc exit', gLoop: 'Loop!', gLoopBtn: 'Loop', gFlyTouch: 'Drag the stick: left and right to turn, up to climb, down to dive', gStick: 'Control stick', gPullUp: 'Pull up!', gStall: 'Too slow!', gAlt: 'Altitude', gOver: 'Over', hereNow: 'here now', visits: 'visits', busLines: 'Bus lines and timetable', shareHere: 'Share', osm: 'Open in OpenStreetMap', shareView: 'An isometric pixel-art map of Tirana', prev: 'Previous', next: 'Next', artCredit: 'Art: GPT Image 2.6, made for this map', illustration: 'Illustration', views: 'Views', diorama: 'Diorama', poster: 'Poster', aboutBrand: 'Tiny Tirana: about this map', tipBus: '🚌 Ride a bus', tipFly: '✈️ Fly a plane', tipLm: '🏛️ Landmarks', tipsLabel: 'Things to try', howLink: 'How this map was made →', planes: 'Live planes', onGround: 'on the ground', demo: 'demo, not real', planesLive: '✈ {n} live planes', planesLive1: '✈ 1 live plane', planesNone: '✈ No planes right now', planesDemo: '✈ {n} demo planes', buses: 'Buses (timetable)', life: 'Cars',
         kinds: { landmark: 'landmark', square: 'square', park: 'park', water: 'water', neighbourhood: 'area', place: 'place', street: 'street', building: 'building' },
         aboutBody: `<p>An isometric pixel-art painting of the city of Tirana and Rinas airport, drawn block by block by a model trained on the city's 3D view.</p>
           <p>Personal, non-commercial project. Painted with Qwen-Image 2.1 + the <i>tiranaiso</i> LoRA. Geometry from Google Photorealistic 3D Tiles; names from OpenStreetMap.</p>
@@ -68,7 +68,7 @@ const AVIF = await new Promise(res => { const i = new Image(); i.onload = () => 
   i.src = 'data:image/avif;base64,AAAAIGZ0eXBhdmlmAAAAAGF2aWZtaWYxbWlhZk1BMUIAAADrbWV0YQAAAAAAAAAhaGRscgAAAAAAAAAAcGljdAAAAAAAAAAAAAAAAAAAAAAOcGl0bQAAAAAAAQAAAB5pbG9jAAAAAEQAAAEAAQAAAAEAAAETAAAAKAAAAChpaW5mAAAAAAABAAAAGmluZmUCAAAAAAEAAGF2MDFDb2xvcgAAAABqaXBycAAAAEtpcGNvAAAAFGlzcGUAAAAAAAAAAQAAAAEAAAAQcGl4aQAAAAADCAgIAAAADGF2MUOBAAwAAAAAE2NvbHJuY2x4AAEADQAGgAAAABdpcG1hAAAAAAAAAAEAAQQBAoMEAAAAMG1kYXQSAAoIGAAGiAhoNCAyGhlHh4Yhh5555oAAAJBAyRxgkGEETy8OpPuA'; });
 // Tile revision: bumped whenever a tile set is re-uploaded. It changes every URL, so the CDN never serves a tile (or a
 // 404 cached while the upload was still running) from before the upload. R2 ignores the query.
-const TILE_REV = '?r=6';
+const TILE_REV = window.TT_TILES.rev;   // bump it in index.html's head
 const ext = layer => (AVIF && layer.formats.includes('avif') ? 'avif' : 'webp');
 // Which tiles exist ({base}_index.json from post/tile_index.py): empty tiles are never written, so never ask for them.
 const tileIndex = async layer => {
@@ -160,8 +160,20 @@ function writeHash() {
   history.replaceState(null, '', `#${lat.toFixed(5)},${lon.toFixed(5)},${z.toFixed(3)}`);
 }
 viewer.addHandler('animation-finish', writeHash);
+// following a car or bus, or flying, moves the view every frame without ever finishing an animation: keep the address
+// current anyway, at most every 2 s (browsers throttle pages that rewrite it more often)
+{ let hashAt = 0; viewer.addHandler('update-viewport', () => { const now = performance.now(); if (now - hashAt > 2000) { hashAt = now; writeHash(); } }); }
+// the head's placeholder tiles go once the viewer has drawn the opening view itself
+{ const pre = () => document.querySelector('#map > .pre-tiles');
+  const drop = () => { const p = pre(); if (p) p.remove(); window.__preTiles = null; };
+  if (pre()) { const check = () => { const it = item(); if (it && it.getFullyLoaded()) { viewer.removeHandler('update-viewport', check); requestAnimationFrame(() => requestAnimationFrame(drop)); } };
+    viewer.addHandler('update-viewport', check); viewer.addHandler('tile-drawn', check);
+    for (const ev of ['canvas-drag', 'canvas-pinch', 'canvas-scroll', 'canvas-double-click']) viewer.addOnceHandler(ev, drop);   // the user moved it: the still images would misalign
+    setTimeout(drop, 20000); } }
 viewer.addHandler('open', () => {
-  const s = readHash() || CONFIG.home; go(s.lat, s.lon, s.zoom, true); smoothing(); addMarkers();
+  const T = window.TT_TILES, phoneHome = T.home !== T.desk && (() => { const [lat, lon] = toLatLon(T.home[0], T.home[1]); return { lat, lon, zoom: T.zoom }; })();
+  // phones: the head's wider, west-shifted opening view
+  const s = readHash() || phoneHome || CONFIG.home; go(s.lat, s.lon, s.zoom, true); smoothing(); addMarkers();
   // painted islands (the airport) at their true place on the same canvas; kept off the minimap so it stays on the city
   for (const isl of CONFIG.islands) viewer.addTiledImage({ tileSource: dzi(isl), x: (isl.origin[0] - ox) / M.width, y: (isl.origin[1] - oy) / M.width,
     width: isl.width / M.width, success: e => { e.item.__island = isl.name; } });
@@ -246,10 +258,16 @@ function renderResults() {
   resEl.hidden = false; qEl.setAttribute('aria-expanded', 'true');
   qEl.setAttribute('aria-activedescendant', sel >= 0 ? `r${sel}` : '');
 }
+// A pick on a phone closes the keyboard right away: the page grows mid-flight and OpenSeadragon re-fits the map where it
+// is, cancelling the flight halfway (Rruga e Kavajës ended 1.3 km short). Re-aim at the target after any resize in 1.5 s.
+let aim = null;
+const aimAt = fn => { fn(); aim = { fn, until: performance.now() + 1500 }; };
+viewer.addHandler('resize', () => { if (aim && performance.now() < aim.until) requestAnimationFrame(() => aim?.fn()); });
 function choose(i) {
   const h = hits[i]; if (!h) return;
-  if (h.lm) { track('search', { found: true, kind: 'card' }); qEl.value = nm(h.lm); hits = []; sel = -1; renderResults(); qEl.blur(); openCard(h.lm); return; }
-  go(h.lat, h.lon, KIND_ZOOM[h.kind]); dropPin(h.lat, h.lon, h.name); track('search', { found: true, kind: h.kind });
+  if (h.lm) { track('search', { found: true, kind: 'card' }); qEl.value = nm(h.lm); hits = []; sel = -1; renderResults(); qEl.blur(); openCard(h.lm);
+    const p = h.lm; aim = { fn: () => go(p.lat, p.lon, Math.min(p.zoom, 0.5), false, ((p.ground ?? GROUND) + (p.top ?? GROUND)) / 2), until: performance.now() + 1500 }; return; }
+  aimAt(() => go(h.lat, h.lon, KIND_ZOOM[h.kind])); dropPin(h.lat, h.lon, h.name); track('search', { found: true, kind: h.kind });
   qEl.value = h.name; hits = []; sel = -1; renderResults(); qEl.blur();
 }
 qEl.addEventListener('focus', () => loadIndex().then(() => { hits = search(qEl.value); renderResults(); }), { once: false });
@@ -273,7 +291,7 @@ const EXTRA = [
 ];
 const nm = p => p.name[lang];
 const pic = (base, alt, cls = '', sizes = '') => `<picture><source type="image/avif" srcset="lm/${base}.avif"><img ${cls ? `class="${cls}"` : ''} src="lm/${base}.webp" alt="${alt}" decoding="async" ${sizes}></picture>`;
-const iconPic = (id, alt = '') => `<picture><source type="image/avif" srcset="lm/${id}-icon96.avif 1x, lm/${id}-icon192.avif 2x"><img src="lm/${id}-icon96.webp" srcset="lm/${id}-icon192.webp 2x" alt="${alt}" width="96" height="96" decoding="async" loading="lazy"></picture>`;
+const iconPic = (id, alt = '') => `<picture><source type="image/avif" srcset="lm/${id}-icon96.avif 1x, lm/${id}-icon192.avif 2x"><img src="lm/${id}-icon96.webp" srcset="lm/${id}-icon192.webp 2x" alt="${alt}" width="96" height="96" decoding="async" loading="lazy" fetchpriority="low"></picture>`;
 
 // ---------------- landmark markers ----------------
 // Each marker floats just above the TOP of its own landmark (heights from the 3D model, landmarks.js `top`) with a stem
@@ -327,7 +345,7 @@ function markStrip() {
   }
 }
 function labelMarkers() { for (const m of markers) { m.el.querySelector('.lm-name').textContent = nm(m.p); m.el.setAttribute('aria-label', nm(m.p)); m.w = 0; } buildStrip(); }
-const NEAR = 0.2;   // image zoom from which names are always shown
+const NEAR = matchMedia('(width < 40rem)').matches ? 0.55 : 0.2;   // image zoom from which names are always shown (phones: only zoomed in, so the first view is not a wall of name pills)
 function layoutMarkers() {
   const it = item(); if (!it || !markers.length) return;
   const z = it.viewportToImageZoom(viewer.viewport.getZoom(true)), near = z >= NEAR;
@@ -510,6 +528,26 @@ document.getElementById('langBtn').addEventListener('click', () => { lang = lang
 if (CONFIG.features.rotate) document.getElementById('cwBtn').hidden = false;
 
 applyLang();
+{ const [hx, hy] = toImage(CONFIG.home.lat, CONFIG.home.lon), p = window.TT_TILES.desk;   // the head preloads tiles around TT_TILES.home (desk = CONFIG.home)
+  if (Math.hypot(hx - p[0], hy - p[1]) > 64) console.error(`[tiles] TT_TILES.home is stale: set it to [${Math.round(hx)}, ${Math.round(hy)}] in index.html`); }
+// ---------------- first visit: three things to try ----------------
+// A third of visitors left within 10 s and almost nobody found the plane. Once per browser, on the default landing, a
+// small bar offers the three things people liked most: buses (the most used layer), the plane, the landmark cards.
+{ let seen = false; try { seen = !!localStorage.getItem('tt-tips'); localStorage.setItem('tt-tips', '1'); } catch {}
+  if (!seen && location.hash.length < 2 && !/[?&]lm=/.test(location.search)) viewer.addOnceHandler('tile-drawn', () => setTimeout(() => {
+    if (document.body.classList.contains('playing') || !card.hidden) return;
+    const bar = document.createElement('div'); bar.className = 'tips'; bar.setAttribute('role', 'region'); bar.setAttribute('aria-label', t('tipsLabel'));
+    bar.innerHTML = `<button type="button" data-t="bus">${t('tipBus')}</button><button type="button" data-t="fly">${t('tipFly')}</button><button type="button" data-t="lm">${t('tipLm')}</button>`
+      + `<button type="button" class="tips-x" data-t="x" aria-label="${t('close')}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></button>`;
+    const close = () => { clearTimeout(timer); bar.classList.add('out'); setTimeout(() => bar.remove(), 400); };
+    const timer = setTimeout(close, 8000);   // a short nudge, not a fixture
+    bar.addEventListener('click', e => { const k = e.target.closest('[data-t]')?.dataset.t; if (!k) return; track('tip', { pick: k }); close();
+      if (k === 'bus') { const b = document.getElementById('busesBtn'); if (b.getAttribute('aria-pressed') !== 'true') b.click(); }
+      else if (k === 'fly') document.getElementById('playBtn').click();
+      else if (k === 'lm') openCard(LANDMARKS[0]); });
+    document.querySelector('.shell').append(bar);
+  }, 1800));
+}
 window.__tt = { viewer, go, avif: AVIF, origin: CONFIG.canvasOrigin, search: q => (loadIndex().then(() => search(q))), toLatLon, toImage };
 
 // ---------------- anonymous usage statistics (analytics.js: cookieless; off with Do Not Track / GPC) ----------------
@@ -517,6 +555,18 @@ document.querySelector('.side')?.addEventListener('click', e => {
   const b = e.target.closest('.btn[aria-pressed]'); if (b) setTimeout(() => track('toggle', { id: b.id.replace(/Btn$/, ''), on: b.getAttribute('aria-pressed') === 'true' }), 0);
 });
 trackPerf(viewer);
+// Lite mode: real visitors on weak laptops and tablets ran at 5-13 fps. The frosted panels and the tilt-shift bands are
+// backdrop blurs, recomputed every frame while cars, buses and planes move. Measure 2 s once the map is up; under
+// 40 fps on a mouse device, drop them (as phones always do) and remember it for this browser.
+if (!TOUCH && !document.documentElement.classList.contains('lite')) viewer.addOnceHandler('tile-drawn', () => setTimeout(() => {
+  if (document.hidden) return;
+  let n = 0; const t0 = performance.now();
+  const f = () => { n++; if (performance.now() - t0 < 2000) return requestAnimationFrame(f);
+    const fps = n / ((performance.now() - t0) / 1000); if (document.hidden || fps >= 40) return;
+    document.documentElement.classList.add('lite'); try { localStorage.setItem('tt-lite', '1'); } catch {}
+    track('perf', { lite: 1, fps: Math.round(fps) }); };
+  requestAnimationFrame(f);
+}, 4000));
 const presenceCtl = initPresence({ el: document.getElementById('presence'), t, lang: () => lang });
 trackLooking(() => { const it = item(); if (!it) return null; const c = it.viewportToImageCoordinates(viewer.viewport.getCenter(true)), [lat, lon] = toLatLon(c.x, c.y);
   return { lat, lon, z: it.viewportToImageZoom(viewer.viewport.getZoom(true)) }; });

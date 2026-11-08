@@ -9,7 +9,7 @@ import { GEO } from './geo.js';
 
 const FT = 0.3048, KT = 0.514444, SQUASH = Math.SQRT1_2;           // ground plane is squashed by sin(45 deg) on screen
 const GROUND_ELLIPSOID = GEO.ground, AIRPORT = GEO.airport;   // ellipsoidal metres of the 3D model (city ground ~146 m; Rinas ~74 m)
-const POLL_MS = 12000,   // positions are extrapolated in between; 12 s keeps a crowd's Worker requests low
+const POLL_MS = 5000,    // fresh positions (Workers Paid: no daily cap; the Worker's edge cache still shares one upstream call per 5 s)
       MAX_EXTRAP_S = 25, GRACE_S = 30, CONVERGE_S = 4;
 
 const visHeight = agl => agl <= 150 ? agl : 150 + 450 * (1 - Math.exp(-(agl - 150) / 2500));   // true near the ground, ~600 m max drawn height

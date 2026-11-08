@@ -433,6 +433,7 @@ export function initBuses({ viewer, item, button, chip, origin, lang: getLang })
 
   // ---------- chip ----------
   function updateChip(t) {
+    if (t == null && data) t = simNow();   // switched on again with the timetable already loaded (at night: no buses, the chip needs the time)
     let text, btn = null;
     if (!on) text = '';
     else if (failed) text = tx('failed');

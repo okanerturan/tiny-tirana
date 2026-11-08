@@ -22,6 +22,33 @@
 <meta name="twitter:description" content="Explore Tirana as an isometric pixel-art map: 46 landmarks with their stories, live planes over Rinas, buses on the real timetable and the Dajti cable car. Painted by an AI model, made with Claude.">
 <meta name="twitter:image" content="https://tirana.fyi/app/og/tirana.jpg">
 <meta name="twitter:image:alt" content="The city of Tirana painted as an isometric pixel-art island in the clouds">
+<script>
+// Tile host and revision (app.js reads them here), and a head start for the opening view: its tiles are requested now,
+// before any module loads (the way isometricistanbul.com does it), so the map finds them already arriving. Same level
+// rule as OpenSeadragon here (smallest level with zoom x density x 2^(17-L) <= 1) and the app's density cap on phones.
+(() => {
+  try { if (localStorage.getItem('tt-lite')) document.documentElement.classList.add('lite'); } catch {}   // measured slow before: no blur from the first frame
+  const host = /(^|\.)tirana\.fyi$/.test(location.hostname) ? '/t/v2' : '..', rev = '?r=6';   // same origin, through the Worker's edge cache (deploy/planes-worker.js tile())
+  // CONFIG.home in image px (app.js warns if it drifts). Phones open a little west and wider, so the Skanderbeg Monument,
+  // the mosque, the Clock Tower and the Palace of Culture are all on a 390 px screen (at 0.4 the monument was off the edge)
+  const desk = [41767, 68904], narrow = innerWidth < 640, home = narrow ? [41517, 68904] : desk, zoom = narrow ? 0.34 : 0.4;
+  window.TT_TILES = { host, rev, home, zoom, desk };
+  if (location.hash.length > 1 || /[?&](lm|tiles)=/.test(location.search)) return;   // opening somewhere else
+  const touch = matchMedia('(pointer: coarse)').matches, pd = touch ? Math.min(devicePixelRatio || 1, 2) : (devicePixelRatio || 1);
+  const L = 17 - Math.max(0, Math.floor(Math.log2(1 / (zoom * pd)))), s = 2 ** (L - 17) / 512, w = innerWidth / zoom / 2, h = innerHeight / zoom / 2;
+  const go = ext => { window.__preTiles = [];
+    for (let r = Math.floor((home[1] - h) * s); r <= Math.floor((home[1] + h) * s); r++)
+      for (let c = Math.floor((home[0] - w) * s); c <= Math.floor((home[0] + w) * s); c++) {
+        const i = new Image(); i.fetchPriority = 'high'; i.decoding = 'async'; i.alt = ''; i.className = 'pre-tile';
+        const tw = 512 * zoom / (2 ** (L - 17));   // a tile's size on screen, css px
+        i.style.cssText = `left:${((c * 512 / 2 ** (L - 17)) - home[0]) * zoom + innerWidth / 2}px;top:${((r * 512 / 2 ** (L - 17)) - home[1]) * zoom + innerHeight / 2}px;width:${tw}px;height:${tw}px`;
+        i.onload = () => { window.__preFirst ??= performance.now(); }; i.src = `${host}/tiles_shaped/map_files/${L}/${c}_${r}.${ext}${rev}`; window.__preTiles.push(i); }
+    // shown as plain images inside #map until the viewer has drawn the view (see the tiny script after #map)
+    window.__preTilesReady = true; window.__placePre?.(); };
+  const t = new Image(); t.onload = () => go(t.width === 1 ? 'avif' : 'webp'); t.onerror = () => go('webp');
+  t.src = 'data:image/avif;base64,AAAAIGZ0eXBhdmlmAAAAAGF2aWZtaWYxbWlhZk1BMUIAAADrbWV0YQAAAAAAAAAhaGRscgAAAAAAAAAAcGljdAAAAAAAAAAAAAAAAAAAAAAOcGl0bQAAAAAAAQAAAB5pbG9jAAAAAEQAAAEAAQAAAAEAAAETAAAAKAAAAChpaW5mAAAAAAABAAAAGmluZmUCAAAAAAEAAGF2MDFDb2xvcgAAAABqaXBycAAAAEtpcGNvAAAAFGlzcGUAAAAAAAAAAQAAAAEAAAAQcGl4aQAAAAADCAgIAAAADGF2MUOBAAwAAAAAE2NvbHJuY2x4AAEADQAGgAAAABdpcG1hAAAAAAAAAAEAAQQBAoMEAAAAMG1kYXQSAAoIGAAGiAhoNCAyGhlHh4Yhh5555oAAAJBAyRxgkGEETy8OpPuA';
+})();
+</script>
 <script type="application/ld+json">{"@context": "https://schema.org", "@type": "WebSite", "name": "Tiny Tirana", "url": "https://tirana.fyi/", "description": "Explore Tirana as an isometric pixel-art map: 46 landmarks with their stories, live planes over Rinas, buses on the real timetable and the Dajti cable car. Painted by an AI model, made with Claude.", "image": "https://tirana.fyi/app/og/tirana.jpg", "inLanguage": ["sq", "en"], "creator": {"@type": "Person", "name": "@okanerturan", "url": "https://github.com/okanerturan"}}</script>
 <title>Tiny Tirana: an isometric pixel-art map of Tirana</title>
 <link rel="icon" type="image/svg+xml" href="brand/favicon.svg">
@@ -30,7 +57,6 @@
 <link rel="apple-touch-icon" href="brand/icon-180.png">
 <link rel="manifest" href="manifest.webmanifest">
 <meta name="theme-color" content="#e8a33d">
-<link rel="preconnect" href="https://tiles.tirana.fyi">
 <link rel="modulepreload" href="app.js">
 <link rel="preload" href="vendor/openseadragon-4.1.0.min.js" as="script">
 <link rel="modulepreload" href="proj.js">
@@ -75,6 +101,8 @@ body { background: var(--bg); color: var(--fg); font: var(--text-m)/1.4 system-u
 /* --- app shell: the map fills the screen, UI floats above it --- */
 .shell { position: fixed; inset: 0; block-size: 100dvh; overflow: clip; }
 /* OpenSeadragon sets position: relative on its element, so size it explicitly instead of relying on inset */
+.pre-tiles { position: absolute; inset: 0; overflow: clip; pointer-events: none; }   /* the opening view before the viewer runs (head script) */
+.pre-tiles img { position: absolute; display: block; max-inline-size: none; image-rendering: auto; }
 .map-base { position: absolute; inset-block-start: 0; inset-inline-start: 0; inline-size: 1696px; max-inline-size: none; block-size: auto; transform-origin: 0 0; will-change: transform; pointer-events: none; user-select: none; image-rendering: auto; }
 #map { position: absolute; inset: 0; inline-size: 100%; block-size: 100%; background: oklch(0.91 0.02 250) image-set(url(clouds.avif) type('image/avif'), url(clouds.webp) type('image/webp')) repeat; }
 .bar {
@@ -326,7 +354,7 @@ body.hide-lm .lm, body.hide-lm .mm-dot { display: none !important; }   /* OSD se
   box-shadow: 0 0 0 1px oklch(1 0 none / 0.6); }
 @media (width < 40rem) { .minimap { inline-size: 7rem; inset-block-start: calc(7.6rem + env(safe-area-inset-top, 0px)); } }   /* below the two-row bar */
 @media (height < 40rem) { .minimap { display: none; } }   /* short windows: keep the side buttons clear */
-@media (pointer: coarse) and (width < 40rem) { .minimap { display: none; } }
+@media (pointer: coarse) { .minimap { display: none; } }   /* touch devices never create the minimap's viewer (app.js): no empty frame on tablets */
 body:has(#card:not([hidden])) .minimap { opacity: 0; pointer-events: none; }
 
 /* --- live planes: sprite at (compressed) altitude, stem down to its shadow on the ground --- */
@@ -529,6 +557,10 @@ body.playing .toast { inset-block-start: calc(9rem + env(safe-area-inset-top, 0p
 }
 @media (prefers-reduced-motion: no-preference) { .lm-pill, .lm-arrow { transition: background-color 160ms var(--ease-out), scale 140ms var(--ease-out); } }
 body.hide-lm .lm-strip-wrap { display: none; }
+/* mid-width screens (tablets in portrait, narrow windows): centred, the strip had to clear the bottom-left chips on BOTH
+   sides and shrank to one landmark; anchored right of the chips it gets the rest of the row (up to the side buttons) */
+@media (40rem <= width < 64rem) { .lm-strip-wrap { inset-inline-start: calc(var(--gap) + 15.5rem + env(safe-area-inset-left, 0px)); translate: none;
+  max-inline-size: calc(100% - 2 * var(--gap) - 15.5rem - 4rem - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px)); } }
 @media (width < 40rem) {
   .lm-strip-wrap { inset-block: calc(7.6rem + env(safe-area-inset-top, 0px)) auto; translate: none; max-inline-size: none;
     inset-inline: calc(var(--gap) + env(safe-area-inset-left, 0px)) calc(var(--gap) + env(safe-area-inset-right, 0px)); }
@@ -556,6 +588,11 @@ body.hide-lm .lm-strip-wrap { display: none; }
   *, *::before, *::after { -webkit-backdrop-filter: none !important; backdrop-filter: none !important; }
   .credit { background: oklch(0.15 0.01 250 / 0.78); }
 }
+
+/* lite mode (app.js): a computer that measured under 40 fps drops the same blur work as phones, and the tilt-shift */
+html.lite { --panel: light-dark(oklch(0.99 0 none / 0.96), oklch(0.22 0.01 250 / 0.95)); }
+html.lite *, html.lite *::before, html.lite *::after { -webkit-backdrop-filter: none !important; backdrop-filter: none !important; }
+html.lite .tilt, html.lite #tsBtn { display: none !important; }
 
 /* search results sit above the landmark strip, and the strip steps aside while typing */
 .results { z-index: 7; }
@@ -630,11 +667,79 @@ body.playing .buses-layer, body.playing .life-layer, body.playing .cable-layer, 
 .corner .attr { display: flex; flex-wrap: wrap; column-gap: 0.75em; row-gap: 0.05em; }   /* spacing, not dots: a wrapped credit just starts a line */
 .attr .bus-credit .long { display: none !important; } .attr .bus-credit .short { display: inline !important; }
 .attr .bus-credit { display: inline-block; white-space: nowrap; }
+
+/* ---- fly mode (game.js flyUi): one top bar, a landmark chip, a thumb stick and a Loop button ---- */
+body.flying .bar, body.flying .side { display: none !important; }
+body.flying .toast { inset-block-start: calc(var(--gap) + 7.6rem + env(safe-area-inset-top, 0px)); }
+.game-hud[data-mode="fly"] .g-bar { position: absolute; inset-block-start: calc(var(--gap) + env(safe-area-inset-top, 0px));
+  inset-inline: calc(var(--gap) + env(safe-area-inset-left, 0px)) calc(var(--gap) + env(safe-area-inset-right, 0px)); margin-inline: auto; max-inline-size: 30rem;
+  display: flex; align-items: center; gap: 0.4rem; padding: 0.35rem; border-radius: 999px; background: var(--panel-solid); box-shadow: var(--shadow); pointer-events: auto; }
+.g-round { flex: none; display: grid; place-items: center; inline-size: 2.75rem; block-size: 2.75rem; padding: 0; border: 0; border-radius: 50%;
+  background: color-mix(in oklch, var(--fg) 8%, transparent); color: inherit; cursor: pointer; touch-action: manipulation; }
+.g-round svg { inline-size: 1.2rem; block-size: 1.2rem; }
+.g-round:active { scale: 0.92; }
+.g-round:focus-visible, .g-loop:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+@media (hover: hover) and (pointer: fine) { .g-round:hover { background: color-mix(in oklch, var(--fg) 15%, transparent); } }
+.g-stats { flex: 1; min-inline-size: 0; display: flex; justify-content: center; align-items: baseline; gap: clamp(0.7rem, 4vw, 1.4rem); white-space: nowrap; font-variant-numeric: tabular-nums; font-size: 0.8rem; color: var(--muted); }
+.g-stats b { font-size: 1.2rem; font-weight: 750; color: var(--fg); }
+.game-hud[data-mode="fly"] .g-chip { position: absolute; inset-block-start: calc(var(--gap) + 4rem + env(safe-area-inset-top, 0px)); inset-inline-start: 50%; translate: -50% 0;
+  display: flex; align-items: center; gap: 0.5rem; max-inline-size: calc(100% - 2 * var(--gap)); padding: 0.3rem 0.95rem 0.3rem 0.3rem; border-radius: 999px;
+  background: var(--panel-solid); box-shadow: var(--shadow); font-size: 0.85rem; white-space: nowrap; }
+.game-hud[data-mode="fly"] .g-chip span { overflow: clip; text-overflow: ellipsis; }
+.g-chip img { flex: none; inline-size: 2rem; block-size: 2rem; border-radius: 50%; background: oklch(0.97 0.01 85); }
+.game-hud[data-mode="fly"] .g-chip.warn { padding-inline: 1rem; background: var(--accent); color: var(--accent-ink); font-size: 0.95rem; }
+.game-hud[data-mode="fly"] .g-chip[hidden], .game-hud[data-mode="fly"] .g-tip[hidden] { display: none; }
+.game-hud[data-mode="fly"] .g-tip { position: absolute; inset-block-end: calc(var(--gap) + 10.5rem + env(safe-area-inset-bottom, 0px)); inset-inline: var(--gap); margin-inline: auto; inline-size: fit-content;
+  max-inline-size: calc(100% - 2 * var(--gap)); padding: 0.5rem 0.9rem; border-radius: 14px; background: var(--panel-solid); box-shadow: var(--shadow); font-size: 0.85rem; text-align: center; text-wrap: balance; }
+.game-pad[data-mode="fly"] { display: flex; justify-content: space-between; align-items: flex-end; pointer-events: none;
+  inset-inline: calc(var(--gap) + 0.25rem + env(safe-area-inset-left, 0px)) calc(var(--gap) + 0.25rem + env(safe-area-inset-right, 0px));
+  inset-block-end: calc(var(--gap) + 0.5rem + env(safe-area-inset-bottom, 0px)); }
+.g-stick { position: relative; flex: none; inline-size: 8.75rem; block-size: 8.75rem; border-radius: 50%; pointer-events: auto; touch-action: none; user-select: none;
+  background: color-mix(in oklch, var(--panel-solid) 88%, transparent); border: 1px solid color-mix(in oklch, var(--fg) 16%, transparent); box-shadow: var(--shadow); }
+.g-arrows { position: absolute; inset: 0; inline-size: 100%; block-size: 100%; fill: none; stroke: color-mix(in oklch, var(--fg) 70%, transparent); stroke-width: 3.5; stroke-linecap: round; stroke-linejoin: round; }
+.g-knob { position: absolute; inset-block-start: 50%; inset-inline-start: 50%; inline-size: 3.75rem; block-size: 3.75rem; margin: -1.875rem 0 0 -1.875rem; border-radius: 50%;
+  background: var(--panel-solid); box-shadow: 0 3px 12px oklch(0 0 none / 0.4), inset 0 0 0 2px color-mix(in oklch, var(--fg) 16%, transparent); }
+.g-stick.on .g-knob { box-shadow: 0 3px 12px oklch(0 0 none / 0.4), inset 0 0 0 3px var(--accent); }
+@media (prefers-reduced-motion: no-preference) { .g-stick:not(.on) .g-knob { transition: translate 0.2s var(--ease-out); } }
+.game-pad[data-mode="fly"] .g-loop { pointer-events: auto; touch-action: none; display: grid; place-items: center; align-content: center; gap: 0.15rem; flex: none;
+  inline-size: 5.75rem; block-size: 5.75rem; min-inline-size: 0; min-block-size: 0; padding: 0; border: 0; border-radius: 50%;
+  background: var(--accent); color: var(--accent-ink); font: inherit; font-size: 0.8rem; font-weight: 750; box-shadow: var(--shadow); cursor: pointer; }
+.g-loop svg { inline-size: 1.75rem; block-size: 1.75rem; }
+.game-pad[data-mode="fly"] .g-loop:active { scale: 0.93; }
+.game-pad[data-mode="fly"] .g-loop.on { opacity: 0.6; }
+
+/* first-visit tips (app.js): three things to try, once per browser */
+.tips { position: absolute; z-index: 5; inset-block-start: calc(4.6rem + env(safe-area-inset-top, 0px)); inset-inline-start: 50%; translate: -50% 0;
+  display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 0.35rem; inline-size: max-content; max-inline-size: calc(100% - 2 * var(--gap));
+  padding: 0.35rem; border-radius: 24px; background: var(--panel-solid); box-shadow: var(--shadow); }
+.tips button { min-block-size: 2.5rem; padding-inline: 0.9rem; border: 0; border-radius: 999px; background: color-mix(in oklch, var(--fg) 8%, transparent); color: inherit;
+  font: inherit; font-size: 0.9rem; font-weight: 600; white-space: nowrap; cursor: pointer; touch-action: manipulation; }
+.tips button:active { scale: 0.95; }
+.tips button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+@media (hover: hover) and (pointer: fine) { .tips button:hover { background: color-mix(in oklch, var(--fg) 15%, transparent); } }
+.tips .tips-x { display: grid; place-items: center; inline-size: 2.5rem; padding: 0; }
+.tips .tips-x svg { inline-size: 1.05rem; block-size: 1.05rem; }
+@media (width < 40rem) { .tips { inset-block-start: calc(11.2rem + env(safe-area-inset-top, 0px)); gap: 0.25rem; padding: 0.3rem; }   /* below the bar and the landmark strip */
+  .tips button { padding-inline: 0.55rem; font-size: 0.8rem; min-block-size: 2.4rem; } .tips .tips-x { inline-size: 2.2rem; } }
+@media (prefers-reduced-motion: no-preference) { .tips { animation: tips-in 0.35s var(--ease-out); } @keyframes tips-in { from { opacity: 0; translate: -50% -0.5rem; } } }
+
+/* ---- a calmer first open (phones especially) ---- */
+.tips.out { opacity: 0; pointer-events: none; }
+@media (prefers-reduced-motion: no-preference) { .tips { transition: opacity 0.35s var(--ease-out); } }
+@media (pointer: coarse) { #inBtn, #outBtn { display: none; } }   /* touch screens pinch to zoom: two fewer buttons in the side column */
+/* switched-on layers: a tint and an accent icon, not three solid orange blocks */
+.side .btn[aria-pressed="true"] { background: color-mix(in oklch, var(--accent) 16%, var(--panel-solid)); color: var(--accent); border-color: color-mix(in oklch, var(--accent) 35%, transparent); }
+@media (hover: hover) and (pointer: fine) { .side .btn[aria-pressed="true"]:hover { background: color-mix(in oklch, var(--accent) 26%, var(--panel-solid)); } }
+/* phones: "here now" and the live-planes chip share one row; the credits keep their own */
+@media (width < 40rem) { .corner { flex-direction: row; flex-wrap: wrap; align-items: flex-end; gap: 0.4rem; } .corner .attr { flex-basis: 100%; } }
 </style>
 </head>
 <body>
 <div class="shell">
   <div id="map" role="application" aria-label="Map"></div>
+  <script>window.__placePre = () => { const m = document.getElementById('map'); if (!m || !window.__preTiles || window.__preDone) return;
+    const d = document.createElement('div'); d.className = 'pre-tiles'; d.append(...window.__preTiles); m.prepend(d); window.__preDone = true; };
+    if (window.__preTilesReady) window.__placePre();</script>
 
   <header class="bar">
     <button class="brand panel" id="aboutBtn" type="button" aria-haspopup="dialog" aria-label="Tiny Tirana: rreth hartës" data-i18n-aria="aboutBrand">

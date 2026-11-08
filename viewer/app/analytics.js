@@ -45,7 +45,13 @@ if (enabled) {
   const w = Math.min(screen.width, screen.height);
   let ref = ''; try { ref = document.referrer ? new URL(document.referrer).hostname : ''; } catch {}
   if (ref === location.hostname) ref = '';
-  track('view', { device: w < 600 ? 'phone' : w < 1000 ? 'tablet' : 'desktop', ref, src: q.get('utm_source') || '',
+  // returning visitors without an id: the browser keeps only the DATE of its last visit (localStorage, never sent); the
+  // event says 'new', 'today', 'week' (within 7 days) or 'older'
+  let ret = 'new';
+  try { const last = localStorage.getItem('tt-last'), today = new Date().toISOString().slice(0, 10);
+    if (last) { const d = (Date.parse(today) - Date.parse(last)) / 864e5; ret = d < 1 ? 'today' : d <= 7 ? 'week' : 'older'; }
+    localStorage.setItem('tt-last', today); } catch { ret = 'unknown'; }
+  track('view', { device: w < 600 ? 'phone' : w < 1000 ? 'tablet' : 'desktop', ref, src: q.get('utm_source') || '', ret,
     vw: Math.round(innerWidth / 100) * 100, dpr: Math.round((devicePixelRatio || 1) * 2) / 2, touch: matchMedia('(pointer: coarse)').matches,
     blang: (navigator.language || '').slice(0, 2) });
   // time actually looking at the map (visible tab), sent each time the tab is hidden: the last one per visit is the total
@@ -54,11 +60,14 @@ if (enabled) {
     if (document.hidden) { if (since != null) visMs += performance.now() - since; since = null; track('time', { secs: Math.round(visMs / 1000) }); flush(); }
     else since = performance.now();
   }, { capture: true });
-  // script errors (message cut to 40 chars, file name only), at most 5 per visit
+  // script errors, at most 5 per visit: the message in two 40-char parts, file name, line:column, and the first two stack
+  // frames (function@file:line:col, file names only) so a minified library's error can be traced to our call
   let nErr = 0;
-  const err = (msg, src, line) => { if (nErr++ < 5) track('error', { msg: String(msg || '').slice(0, 40), src: String(src || '').split('/').pop().slice(0, 30), line: line || 0 }); };
-  addEventListener('error', e => err(e.message, e.filename, e.lineno));
-  addEventListener('unhandledrejection', e => err(e.reason?.message || e.reason, '', 0));
+  const frames = st => String(st || '').split('\n').slice(1, 3).map(l => l.trim().replace(/^at /, '').replace(/https?:\/\/[^ )]*\//g, '').replace(/[()]/g, '')).join(' < ').slice(0, 80);
+  const err = (msg, src, line, col, stack) => { if (nErr++ >= 5) return; const m = String(msg || '');
+    track('error', { msg: m.slice(0, 40), msg2: m.slice(40, 80), src: String(src || '').split('/').pop().slice(0, 30), line: `${line || 0}:${col || 0}`, at: frames(stack).slice(0, 40), at2: frames(stack).slice(40, 80) }); };
+  addEventListener('error', e => err(e.message, e.filename, e.lineno, e.colno, e.error?.stack));
+  addEventListener('unhandledrejection', e => err(e.reason?.message || e.reason, '', 0, 0, e.reason?.stack));
 }
 
 /** Load speed and smoothness, once per visit: ms until the first map tile arrived, and frames per second a few
@@ -67,7 +76,7 @@ export function trackPerf(viewer) {
   if (!enabled) return;
   // a tab opened in the background loads slowly and animates at ~1 fps: its numbers are not the device's, so skip them
   let wasHidden = document.hidden; document.addEventListener('visibilitychange', () => { if (document.hidden) wasHidden = true; });
-  viewer.addOnceHandler('tile-loaded', () => { if (!wasHidden) track('perf', { first: Math.round(performance.now()) }); });
+  viewer.addOnceHandler('tile-loaded', () => { if (!wasHidden) track('perf', { first: Math.round(Math.min(performance.now(), window.__preFirst ?? Infinity)) }); });   // the first tile on screen: the head's preload, if it came first
   setTimeout(() => {
     if (document.hidden || wasHidden) return;
     let n = 0; const t0 = performance.now();

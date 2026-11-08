@@ -232,7 +232,7 @@ def bake_roads():
                     ra, rb = seg[0][0], seg[-1][0]
                     if w['oneway'] == -1: ra, rb, pts = rb, ra, pts[::-1]
                     L = sum(math.hypot(p[0] - q[0], (p[1] - q[1]) / SQ) for p, q in zip(pts, pts[1:])) * MPP
-                    edges.append([ra, rb, w['cls'], w['oneway'] != 0, (w['hidden'], w['ring']), w['lanes'] or LANES[w['cls']], pts, L])
+                    edges.append([ra, rb, w['cls'], w['oneway'] != 0, (w['hidden'], w['ring'], w['id']), w['lanes'] or LANES[w['cls']], pts, L])
                 start = i
     # prune short dead-end spurs (repeatedly). Main roads end where they meet the side streets we leave out: those ends,
     # and one-ways that lead nowhere / come from nowhere, become PORTALS (like the painting's edge): cars fade out there and
@@ -268,18 +268,27 @@ def bake_roads():
         return vid[r]
     vxy = []
     out_edges, total, hid, lane_m = [], [0.0] * 5, 0, 0
-    for ra, rb, cls, oneway, (hidden, ring), lanes, pts, L in edges:
+    NEW_WAY = 1_200_000_000        # OSM way ids above this were mapped from ~2022 on: newer than Google's 3D capture of Tirana
+    retag = [0, 0]
+    for ra, rb, cls, oneway, (hidden, ring, wid), lanes, pts, L in edges:
         a, b = vert(ra), vert(rb)
         while len(vxy) < 2 * len(verts): r = verts[len(vxy) // 2]; vxy += [round(px[r][0]), round(px[r][1])]
         prev = (vxy[2 * a], vxy[2 * a + 1]); dl = []
         for u, v, _ in pts[1:-1]:
             q = (round(u), round(v)); dl += [q[0] - prev[0], q[1] - prev[1]]; prev = q
-        flags = (1 if oneway else 0) | (2 if hidden else 0) | (4 if ra in cut else 0) | (8 if rb in cut else 0) | (16 if ring else 0)
         hf = hidden_runs(pts, 0.0 if oneway else LANE_OFF)
+        share = (sum(hf[1::2]) - sum(hf[0::2])) / 10 / max(L, 1)          # hf is in dm along the edge
+        # Visibility from the 3D model, not from tags: an underpass tagged tunnel=yes that is mostly open to the sky (the
+        # ring road's trench) keeps its cars, hidden only under the deck; a road mapped after the 3D capture that the model
+        # still has houses / rubble on is treated as a tunnel (cars vanish and come back) instead of ghosting through houses.
+        if hidden and share < 0.5: hidden = False; retag[0] += 1
+        elif not hidden and wid > NEW_WAY and share > 0.6 and L > 60: hidden = True; retag[1] += 1
+        flags = (1 if oneway else 0) | (2 if hidden else 0) | (4 if ra in cut else 0) | (8 if rb in cut else 0) | (16 if ring else 0)
         hb = [] if oneway else hidden_runs(pts, -LANE_OFF)
         out_edges.append([a, b, cls, flags, lanes, dl, hf, hb])
         hid += sum(hf[1::2]) - sum(hf[0::2]) + sum(hb[1::2]) - sum(hb[0::2]); lane_m += L * (1 if oneway else 2)
         total[cls] += L
+    print(f'visibility from the model: {retag[0]} tunnel edges open to the sky, {retag[1]} new-road edges under old buildings')
     data = dict(v=2, mpp=MPP, ext=list(EXT), verts=vxy, edges=out_edges)
     json.dump(data, open(os.path.join(OUT, 'roads.json'), 'w'), separators=(',', ':'))
     print(f'roads: {len(verts)} verts, {len(out_edges)} edges, km by class', [round(x / 1000, 1) for x in total],

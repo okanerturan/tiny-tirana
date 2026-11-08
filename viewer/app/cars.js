@@ -15,7 +15,7 @@
 // pulls out and passes it if the other lane is free. Every car on the road is published in vehicles.js carsNow (camera px)
 // so buses can follow cars; as a safety net a slow car with a bus stuck right behind it for ~8 s pulls over to the curb,
 // waits for the bus to pass and rejoins. Sizes come from the shared vehiclePx scale, in proportion with the buses.
-// Hidden cars (behind a building or under trees) are drawn as an x-ray silhouette; a tapped car opens a card with "Follow".
+// Hidden cars (behind a building or under trees) fade out; the followed one keeps an x-ray outline. A tapped car opens a card with "Follow".
 
 import { vehiclePx, busesNow, carsNow, follow } from './vehicles.js';
 
@@ -481,7 +481,9 @@ export function makeCars({ roads, meta, sheet, rnd, viewer, origin, redraw }) {
       ctx.globalAlpha = base * c.a * c.pa;
       ctx.drawImage(sheet, c.f * CAR.CELL, CAR.y0 + c.row * CAR.CELL, CAR.CELL, CAR.CELL, ox + c.x * k - size / 2, oy + c.y * k - size / 2, size, size);
     }
-    for (const c of vis) if (c.a < 0.98) xray(ctx, c, ox + c.x * k - size / 2, oy + c.y * k - size / 2, size, base * (1 - c.a) * c.pa);   // over the occluder
+    // only the followed car keeps an outline over what hides it (so you don't lose it); other hidden cars just fade out:
+    // pale outlines on every car under a tree or behind a wall read as cars driving underground
+    if (followed && vis.includes(followed) && followed.a < 0.98) xray(ctx, followed, ox + followed.x * k - size / 2, oy + followed.y * k - size / 2, size, base * (1 - followed.a) * followed.pa);
     ctx.globalAlpha = base;
     if (tip && !tip.hidden) placeTip();
     return vis.length;

@@ -47,7 +47,14 @@ export function initGame({ viewer, item, origin, t, button, landmarks, nm, toCam
   const ctx = cv.getContext('2d'); viewer.canvas.append(cv);
   const hud = document.createElement('div'); hud.className = 'game-hud'; hud.hidden = true;
   // act on pointerdown: a tap's click never arrives if the button was replaced between finger down and up (phones)
+  hud.addEventListener('click', e => {
+    if (hud.dataset.mode !== 'fly') return; const b = e.target.closest?.('button'); if (!b) return;
+    if (b.classList.contains('g-exit')) stop();
+    else if (b.classList.contains('g-mute')) { toggleMute(); b.innerHTML = snd.muted ? ICON.off : ICON.on; }
+    else if (b.classList.contains('g-share')) document.getElementById('shareBtn')?.click();
+  });
   hud.addEventListener('pointerdown', e => {
+    if (hud.dataset.mode === 'fly') return;
     const b = e.target.closest?.('button'); if (!b) return; e.preventDefault(); e.stopPropagation();
     if (b.classList.contains('g-exit') || b.dataset.a === 'exit') stop();
     else if (b.classList.contains('g-mute')) toggleMute();
@@ -255,11 +262,12 @@ export function initGame({ viewer, item, origin, t, button, landmarks, nm, toCam
     return { u, v, th: -Math.PI / 4, sp: 46, alt: 160, gam: 0, thr: 0.6, trail: [], over: null, bank: 0, loop: null, msg: null, spaceWas: false }; }
   const say = (txt, ms = 1300) => { F.msg = { txt, until: performance.now() + ms }; };
   function stepFly(dt) {
-    const turn = (held('ArrowLeft', 'a') ? -1 : 0) + (held('ArrowRight', 'd') ? 1 : 0);
-    const pitch = (held('ArrowUp') ? 1 : 0) - (held('ArrowDown') ? 1 : 0);
+    const clamp1 = v => Math.max(-1, Math.min(1, v));
+    const turn = clamp1((held('ArrowLeft', 'a') ? -1 : 0) + (held('ArrowRight', 'd') ? 1 : 0) + stick.x);   // the stick is analog: gentle turns
+    const pitch = clamp1((held('ArrowUp') ? 1 : 0) - (held('ArrowDown') ? 1 : 0) + stick.y);
     if (held('w')) F.thr = Math.min(1, F.thr + 0.6 * dt); if (held('s')) F.thr = Math.max(0.15, F.thr - 0.6 * dt);
     const space = held(' ');
-    if (space && !F.spaceWas && !F.loop) { F.loop = { ph: 0, sp0: Math.max(F.sp, 62) }; F.sp = F.loop.sp0; F.gam = 0; say(t('gLoop')); snd.beep(880, 0.1, 'triangle', 0.08); track('game', { mode: 'fly', loop: 1 }); }
+    if (space && !F.spaceWas && !F.loop) { F.loop = { ph: 0, sp0: Math.max(F.sp, 62) }; F.sp = F.loop.sp0; F.gam = 0; say(t('gLoop')); snd.beep(880, 0.1, 'triangle', 0.08); navigator.vibrate?.(18); track('game', { mode: 'fly', loop: 1 }); }
     F.spaceWas = space;
     let adv;
     if (F.loop) {                                   // the loop: pitch angle = phase, energy sets the speed
@@ -291,12 +299,45 @@ export function initGame({ viewer, item, origin, t, button, landmarks, nm, toCam
     if (F.msg && performance.now() > F.msg.until) F.msg = null;
     snd.rev((F.sp - 20) / 60, 'plane');
   }
-  function flyHud() {
-    hud.innerHTML = hudTop(`<span>✈️ <b>${Math.round(F.sp * 3.6)}</b> km/h</span><span><i class="g-lbl">${t('gAlt')}</i> <b>${Math.round(F.alt)} m</b></span>`)
-      + (F.msg ? `<div class="g-call">${F.msg.txt}</div>` : '')
-      + (F.over && !F.msg ? `<div class="g-call g-over">${t('gOver')} ${nm(F.over)}</div>` : '') + (performance.now() - F.t0 < 4000 ? `<div class="g-help">${t('gFlyKeys')}</div>` : '');
-    bindTop();
+  // ---------- fly: one top bar, a landmark chip, a thumb stick and a Loop button; built once, updated in place ----------
+  const stick = { x: 0, y: 0 };                          // on-screen stick, -1..1 each (y: up = climb)
+  const svg = d => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
+  const ICON = { close: svg('<path d="M6 6l12 12M18 6 6 18"/>'), share: svg('<path d="M12 3v12M7 8l5-5 5 5M5 14v5a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-5"/>'),
+    on: svg('<path d="M4 9v6h4l5 4V5L8 9z"/><path d="M16.5 8.5a5 5 0 0 1 0 7M19 6a8.5 8.5 0 0 1 0 12"/>'), off: svg('<path d="M4 9v6h4l5 4V5L8 9z"/><path d="M17 9l5 6M22 9l-5 6"/>'),
+    loop: svg('<path d="M12 4a8 8 0 1 1-7.4 5"/><path d="M4 4v5h5"/>') };
+  let ui = null;
+  function flyUi() {
+    hud.dataset.mode = pad.dataset.mode = 'fly'; document.body.classList.add('flying');
+    hud.innerHTML = `<div class="g-bar">
+        <button type="button" class="g-round g-exit" aria-label="${t('close')}">${ICON.close}</button>
+        <div class="g-stats"><span><b data-v="sp">0</b> km/h</span><span><b data-v="alt">0</b> m</span></div>
+        <button type="button" class="g-round g-share" aria-label="${t('share')}">${ICON.share}</button>
+        <button type="button" class="g-round g-mute" aria-label="${t('gSound')}">${snd.muted ? ICON.off : ICON.on}</button>
+      </div><div class="g-chip" hidden></div><div class="g-tip">${t(matchMedia('(pointer: coarse)').matches ? 'gFlyTouch' : 'gFlyKeys')}</div>`;
+    pad.innerHTML = `<div class="g-stick" role="application" aria-label="${t('gStick')}"><svg class="g-arrows" viewBox="0 0 100 100" aria-hidden="true"><path d="M44 16l6-6 6 6M44 84l6 6 6-6M16 44l-6 6 6 6M84 44l6 6-6 6"/></svg><div class="g-knob"></div></div>
+      <button type="button" class="g-loop" data-k=" " aria-label="${t('gLoopBtn')}">${ICON.loop}<span>${t('gLoopBtn')}</span></button>`;
+    ui = { sp: hud.querySelector('[data-v=sp]'), alt: hud.querySelector('[data-v=alt]'), chip: hud.querySelector('.g-chip'), tip: hud.querySelector('.g-tip'),
+      loop: pad.querySelector('.g-loop'), last: {} };
+    const st = pad.querySelector('.g-stick'), knob = st.querySelector('.g-knob'); let pid = null;
+    const dz = v => (Math.abs(v) < 0.14 ? 0 : (v - Math.sign(v) * 0.14) / 0.86);   // a small dead zone in the middle
+    const set = e => { const r = st.getBoundingClientRect(), R = r.width * 0.3; let dx = e.clientX - (r.left + r.width / 2), dy = e.clientY - (r.top + r.height / 2);
+      const d = Math.hypot(dx, dy); if (d > R) { dx *= R / d; dy *= R / d; }
+      knob.style.translate = `${dx.toFixed(1)}px ${dy.toFixed(1)}px`; stick.x = dz(dx / R); stick.y = dz(-dy / R); };
+    st.addEventListener('pointerdown', e => { e.preventDefault(); e.stopPropagation(); pid = e.pointerId; st.setPointerCapture?.(pid); st.classList.add('on'); set(e); ui.tip.hidden = true; });
+    st.addEventListener('pointermove', e => { if (e.pointerId === pid) set(e); });
+    for (const ev of ['pointerup', 'pointercancel', 'lostpointercapture']) st.addEventListener(ev, e => { if (e.pointerId !== pid) return; pid = null; stick.x = stick.y = 0; knob.style.translate = ''; st.classList.remove('on'); });
   }
+  function flyHud() {
+    const L = ui.last, sp = Math.round(F.sp * 3.6), alt = Math.round(F.alt);
+    if (sp !== L.sp) ui.sp.textContent = L.sp = sp;
+    if (alt !== L.alt) ui.alt.textContent = L.alt = alt;
+    const key = F.msg ? 'm' + F.msg.txt : F.over ? 'o' + F.over.id : '';
+    if (key !== L.chip) { L.chip = key; ui.chip.hidden = !key; ui.chip.classList.toggle('warn', !!F.msg);
+      ui.chip.innerHTML = F.msg ? `<b>${F.msg.txt}</b>` : F.over ? `<img src="lm/${F.over.id}-icon96.webp" alt="" width="48" height="48"><span>${t('gOver')} <b>${nm(F.over)}</b></span>` : ''; }
+    if (!ui.tip.hidden && performance.now() - F.t0 > 6000) ui.tip.hidden = true;
+    if (!!F.loop !== L.loop) ui.loop.classList.toggle('on', L.loop = !!F.loop);
+  }
+
 
   // ---------- draw ----------
   function carSprite(u, v, th, row, size, k, ox, oy) {
@@ -342,7 +383,9 @@ export function initGame({ viewer, item, origin, t, button, landmarks, nm, toCam
     raf = 0; if (!mode) return;
     const dt = Math.min(0.05, lastT ? (ts - lastT) / 1000 : 0); lastT = ts;
     if (mode === 'race') { if (!R.showing) { stepRace(dt); raceHud(); } const me = R.me; follow(...step(me.u, me.v, me.th, Math.max(0, me.sp) * 0.9)); }
-    else { stepFly(dt); flyHud(); const [au, av] = step(F.u, F.v, F.th, F.loop ? 0 : 90); follow(au, av - F.alt * SQ / MPP * 0.85);
+    else { stepFly(dt); flyHud(); const [au, av] = step(F.u, F.v, F.th, F.loop ? 0 : 45);
+      const zNow = item().viewportToImageZoom(viewer.viewport.getZoom(true));
+      follow(au, av - F.alt * SQ / MPP + (H * 0.1) / zNow);   // the plane sits ~10 % above the middle, clear of the controls
       const it = item(), z = it.viewportToImageZoom(viewer.viewport.getZoom()), zc = Math.min(0.75, Math.max(0.07, z));   // pinch / wheel zoom, within limits
       if (zc !== z) viewer.viewport.zoomTo(it.imageToViewportZoom(zc), null, true); }
     draw(); raf = requestAnimationFrame(loop);
@@ -353,12 +396,11 @@ export function initGame({ viewer, item, origin, t, button, landmarks, nm, toCam
     viewer.setMouseNavEnabled(m === 'fly'); viewer.panHorizontal = viewer.panVertical = m !== 'fly'; hud.hidden = false; pad.hidden = false; resize(); snd.engine(true, m === 'race' ? 'car' : 'plane');
     const it = item();
     if (m === 'race') {
-      data.C ??= buildCircuit(data.roads); R = newRace(data.C);
+      data.C ??= buildCircuit(data.roads); R = newRace(data.C); hud.dataset.mode = pad.dataset.mode = 'race';
       pad.innerHTML = `<div class="g-steer">${padBtn('◀', 'ArrowLeft')}${padBtn('▶', 'ArrowRight')}</div><div class="g-pedals">${padBtn(t('gBrake'), 'ArrowDown', 'brake')}${padBtn('⚡', ' ', 'boost')}${padBtn(t('gGas'), 'ArrowUp', 'gas')}</div>`;
       viewer.viewport.zoomTo(it.imageToViewportZoom(0.72), null, true); follow(R.me.u, R.me.v);
     } else {
-      F = newFlight(); F.t0 = performance.now();
-      pad.innerHTML = `<div class="g-steer">${padBtn('↺', 'ArrowLeft')}${padBtn('↻', 'ArrowRight')}</div><div class="g-pedals">${padBtn('▼', 'ArrowDown')}${padBtn(t('gLoopBtn'), ' ', 'boost loop')}${padBtn('▲', 'ArrowUp', 'gas')}</div>`;
+      F = newFlight(); F.t0 = performance.now(); flyUi();
       viewer.viewport.zoomTo(it.imageToViewportZoom(0.22), null, true);
     }
     track('game', { mode: m, start: true });
@@ -366,7 +408,8 @@ export function initGame({ viewer, item, origin, t, button, landmarks, nm, toCam
   }
   function stop() {
     mode = null; R = null; F = null; cancelAnimationFrame(raf); raf = 0; keys.clear(); snd.engine(false);
-    hud.hidden = true; pad.hidden = true; menu.hidden = true; hud.innerHTML = ''; document.body.classList.remove('playing');
+    hud.hidden = true; pad.hidden = true; menu.hidden = true; hud.innerHTML = ''; pad.innerHTML = ''; ui = null; stick.x = stick.y = 0;
+    document.body.classList.remove('playing', 'flying');
     button.setAttribute('aria-pressed', 'false'); viewer.setMouseNavEnabled(true); viewer.panHorizontal = viewer.panVertical = true;
     ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.clearRect(0, 0, cv.width, cv.height);
   }
